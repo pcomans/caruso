@@ -4,8 +4,11 @@ require "spec_helper"
 
 RSpec.describe "File Conversion Validation", type: :integration do
   before do
-    init_caruso
-    add_marketplace("https://github.com/anthropics/claude-code")
+    # Skip init for config file structure tests - they test init itself
+    unless self.class.metadata[:skip_init]
+      init_caruso
+      add_marketplace("https://github.com/anthropics/claude-code")
+    end
   end
 
   describe ".mdc file structure", :live do
@@ -120,8 +123,9 @@ RSpec.describe "File Conversion Validation", type: :integration do
     end
   end
 
-  describe "manifest file structure" do
+  describe "manifest file structure", :skip_init do
     it "creates valid JSON manifest" do
+      init_caruso
       add_marketplace("https://github.com/anthropics/claude-code")
 
       manifest = load_manifest
@@ -129,6 +133,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     end
 
     it "has marketplaces section" do
+      init_caruso
       add_marketplace("https://github.com/anthropics/claude-code")
 
       manifest = load_manifest
@@ -179,17 +184,17 @@ RSpec.describe "File Conversion Validation", type: :integration do
     end
   end
 
-  describe "config file structure" do
-    before do
-      init_caruso
-    end
-
+  describe "config file structure", :skip_init do
     it "creates valid JSON config" do
+      init_caruso
+
       config = load_config
       expect(config).to be_a(Hash)
     end
 
     it "includes all required fields" do
+      init_caruso
+
       config = load_config
 
       expect(config).to have_key("ide")
@@ -199,6 +204,8 @@ RSpec.describe "File Conversion Validation", type: :integration do
     end
 
     it "has correct values" do
+      init_caruso
+
       config = load_config
 
       expect(config["ide"]).to eq("cursor")

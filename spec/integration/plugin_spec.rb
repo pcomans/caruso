@@ -121,7 +121,7 @@ RSpec.describe "Plugin Management", type: :integration do
   end
 
   describe "caruso plugin uninstall" do
-    it "uninstalls an installed plugin" do
+    it "uninstalls an installed plugin", :live do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
       # First install a plugin
@@ -151,12 +151,15 @@ RSpec.describe "Plugin Management", type: :integration do
   end
 
   describe "error handling" do
-    it "handles network errors gracefully" do
-      # Try to add an invalid marketplace
-      result = run_caruso("marketplace add https://invalid-url-12345.example.com/marketplace.json")
+    it "handles network errors gracefully during plugin operations" do
+      # Add a marketplace that will fail when fetched
+      run_caruso("marketplace add https://invalid-url-12345.example.com/marketplace.json")
 
-      # Should not crash, should show error
-      expect(result[:output]).to match(/error|failed|could not/i)
+      # Trying to list plugins should handle the network error gracefully
+      result = run_caruso("plugin list")
+
+      # Should show error but not crash
+      expect(result[:output]).to match(/error|Error fetching marketplace/i)
     end
   end
 end
