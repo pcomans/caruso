@@ -15,11 +15,14 @@ module Caruso
     end
 
     def adapt
+      created_files = []
       files.each do |file_path|
         content = File.read(file_path)
         adapted_content = inject_metadata(content, file_path)
-        save_file(file_path, adapted_content)
+        created_file = save_file(file_path, adapted_content)
+        created_files << created_file
       end
+      created_files
     end
 
     private
@@ -59,17 +62,21 @@ module Caruso
 
     def save_file(original_path, content)
       filename = File.basename(original_path, ".*")
-      
+
       # Rename SKILL.md to the skill name (parent directory) to avoid collisions
       if filename.casecmp("skill").zero?
         filename = File.basename(File.dirname(original_path))
       end
 
       extension = agent == :cursor ? ".mdc" : ".md"
-      target_path = File.join(@target_dir, "#{filename}#{extension}")
-      
+      output_filename = "#{filename}#{extension}"
+      target_path = File.join(@target_dir, output_filename)
+
       File.write(target_path, content)
       puts "Saved: #{target_path}"
+
+      # Return just the filename, not the full path
+      output_filename
     end
   end
 end

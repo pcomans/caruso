@@ -108,9 +108,12 @@ module Caruso
         target_dir: target_dir,
         agent: ide.to_sym
       )
-      adapter.adapt
+      created_filenames = adapter.adapt
 
-      manager.add_plugin(plugin_name, files, marketplace_uri: marketplace_url)
+      # Convert filenames to relative paths from project root
+      created_files = created_filenames.map { |f| File.join(config_manager.target_dir, f) }
+
+      manager.add_plugin(plugin_name, created_files, marketplace_uri: marketplace_url)
       puts "Installed #{plugin_name}!"
     end
 
