@@ -4,13 +4,13 @@
 
 ## Mission
 
-Enable Cursor to consume high-quality, community-curated instructions regardless of their original format.
+Enable Cursor to consume Claude Code plugins from marketplaces by converting them to Cursor-compatible rules.
 
 ## Features
 
 *   **One-time Configuration**: Initialize once with `caruso init --ide=cursor` and all commands automatically use the right settings.
 *   **Universal Fetcher**: Downloads plugins from local paths, HTTP URLs, or GitHub repositories.
-*   **Smart Adapter**: Automatically converts Claude Plugin Markdown files into **Cursor Rules** (`.mdc`), injecting necessary metadata (like `globs: []`) to ensure they work out of the box.
+*   **Smart Adapter**: Automatically converts Claude Plugin Markdown files into **Cursor Rules** (`.mdc`), injecting necessary metadata (`globs: []`, `alwaysApply: false`) to ensure they work out of the box.
 *   **Package Manager**: Install, uninstall, and list plugins selectively. Tracks configuration in `.caruso.json` and installed plugins in `.cursor/rules/caruso.json`.
 
 ## Installation
@@ -136,7 +136,7 @@ caruso plugin install frontend-design
 1. Fetches plugin files from the marketplace
 2. Scans `commands/`, `agents/`, and `skills/` directories
 3. Converts Claude Plugin Markdown to Cursor Rules (`.mdc` format)
-4. Injects Cursor-specific metadata (e.g., `globs: []`)
+4. Injects Cursor-specific metadata (`globs: []`, `alwaysApply: false`)
 5. Saves converted files to `.cursor/rules/`
 6. Updates `.cursor/rules/caruso.json` manifest
 
