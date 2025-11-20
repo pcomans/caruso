@@ -1,0 +1,75 @@
+# frozen_string_literal: true
+
+require "fileutils"
+require "yaml"
+
+module Caruso
+  class Adapter
+    attr_reader :files, :target_dir, :agent
+
+    def initialize(files, target_dir:, agent: :cursor)
+      @files = files
+      @target_dir = target_dir
+      @agent = agent
+      FileUtils.mkdir_p(@target_dir)
+    end
+
+    def adapt
+      files.each do |file_path|
+        content = File.read(file_path)
+        adapted_content = inject_metadata(content, file_path)
+        save_file(file_path, adapted_content)
+      end
+    end
+
+    private
+
+    def inject_metadata(content, file_path)
+      # Check if frontmatter exists
+      if content.match?(/\A---\s*\n.*?\n---\s*\n/m)
+        # If it exists, we might need to append to it or modify it
+        # For now, we assume existing frontmatter is "good enough" but might need 'globs' for Cursor
+        ensure_cursor_globs(content) if agent == :cursor
+      else
+        # No frontmatter, prepend it
+        create_frontmatter(file_path) + content
+      end
+    end
+
+    def ensure_cursor_globs(content)
+      # Simple check: if 'globs:' is missing, add it.
+      # We default to empty globs to avoid auto-attaching to every file.
+      # This allows Cursor to use semantic search (Apply Intelligently) based on description.
+      unless content.include?("globs:")
+        content.sub!(/\A---\s*\n/, "---\nglobs: []\n")
+      end
+      content
+    end
+
+    def create_frontmatter(file_path)
+      filename = File.basename(file_path)
+      <<~YAML
+        ---
+        description: Imported rule from #{filename}
+        globs: []
+        alwaysApply: false
+        ---
+      YAML
+    end
+
+    def save_file(original_path, content)
+      filename = File.basename(original_path, ".*")
+      
+      # Rename SKILL.md to the skill name (parent directory) to avoid collisions
+      if filename.casecmp("skill").zero?
+        filename = File.basename(File.dirname(original_path))
+      end
+
+      extension = agent == :cursor ? ".mdc" : ".md"
+      target_path = File.join(@target_dir, "#{filename}#{extension}")
+      
+      File.write(target_path, content)
+      puts "Saved: #{target_path}"
+    end
+  end
+end
