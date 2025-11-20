@@ -40,12 +40,19 @@ module Caruso
     end
 
     def ensure_cursor_globs(content)
-      # Simple check: if 'globs:' is missing, add it.
-      # We default to empty globs to avoid auto-attaching to every file.
-      # This allows Cursor to use semantic search (Apply Intelligently) based on description.
+      # Add required Cursor metadata fields if missing
+      # globs: [] enables semantic search (Apply Intelligently)
+      # alwaysApply: false means it won't apply to every chat session
+
       unless content.include?("globs:")
         content.sub!(/\A---\s*\n/, "---\nglobs: []\n")
       end
+
+      unless content.include?("alwaysApply:")
+        # Add after the first line of frontmatter
+        content.sub!(/\A---\s*\n/, "---\nalwaysApply: false\n")
+      end
+
       content
     end
 
