@@ -1,2 +1,19 @@
+# Caruso config files (generated during testing/usage)
 .cursor/
 .caruso.json
+
+# RSpec artifacts
+.rspec_status
+coverage/
+
+# Gem build artifacts
+*.gem
+pkg/
+
+# Bundler
+.bundle/
+vendor/bundle/
+
+# Temporary files
+tmp/
+.DS_Store

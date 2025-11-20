@@ -32,4 +32,8 @@ Gem::Specification.new do |spec|
   spec.add_dependency "thor", "~> 1.3" # For CLI
   spec.add_dependency "faraday", "~> 2.0" # For HTTP requests
   spec.add_dependency "git", "~> 1.19" # For cloning repos
+
+  # Development dependencies
+  spec.add_development_dependency "rspec", "~> 3.12"
+  spec.add_development_dependency "rake", "~> 13.0"
 end

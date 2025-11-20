@@ -8,9 +8,10 @@ Enable Cursor to consume high-quality, community-curated instructions regardless
 
 ## Features
 
-*   **Universal Fetcher**: Downloads plugins from local paths, HTTP URLs, or GitHub repositories (e.g., `anthropics/claude-code`).
+*   **One-time Configuration**: Initialize once with `caruso init --ide=cursor` and all commands automatically use the right settings.
+*   **Universal Fetcher**: Downloads plugins from local paths, HTTP URLs, or GitHub repositories.
 *   **Smart Adapter**: Automatically converts Claude Plugin Markdown files into **Cursor Rules** (`.mdc`), injecting necessary metadata (like `globs: []`) to ensure they work out of the box.
-*   **Package Manager**: Install, remove, and list plugins selectively. Tracks installed plugins via a `caruso.json` manifest.
+*   **Package Manager**: Install, uninstall, and list plugins selectively. Tracks configuration in `.caruso.json` and installed plugins in `.cursor/rules/caruso.json`.
 
 ## Installation
 
@@ -36,62 +37,270 @@ gem specific_install -l https://github.com/pcomans/caruso.git
 
 ## Usage
 
-Caruso works like a package manager for your Cursor rules.
+Caruso mirrors the Claude Code CLI structure, providing a familiar interface for marketplace and plugin management.
 
-### List Available Plugins
+### Getting Started
 
-See what's available in a marketplace:
-
-```bash
-caruso list https://github.com/anthropics/claude-code --target .cursor/rules
-```
-
-### Install a Plugin
-
-Fetch a specific plugin and convert it to Cursor rules:
+Before using Caruso, initialize it in your project directory:
 
 ```bash
-caruso install frontend-design https://github.com/anthropics/claude-code --target .cursor/rules
+# Navigate to your project
+cd /path/to/your/project
+
+# Initialize for Cursor (currently the only supported IDE)
+caruso init --ide=cursor
 ```
 
-This will:
-1.  Fetch the plugin files.
-2.  Convert them to `.mdc`.
-3.  Save them to `.cursor/rules/`.
-4.  Update `.cursor/rules/caruso.json` to track the installation.
+This creates a `.caruso.json` config file that stores your IDE preference and target directory. You only need to do this once per project.
 
-### Remove a Plugin
+**What happens during init:**
+- Creates `.caruso.json` in your project root
+- Configures target directory (`.cursor/rules` for Cursor)
+- All subsequent commands automatically use this configuration
 
-Remove a plugin from your manifest:
+### Marketplace commands
+
+Manage plugin marketplaces to discover and install plugins from different sources.
+
+#### Add a marketplace
+
+Add the official Claude Code marketplace:
 
 ```bash
-caruso remove frontend-design --target .cursor/rules
+caruso marketplace add https://github.com/anthropics/claude-code
 ```
 
-### Sync (Legacy)
-
-Fetch ALL plugins from a marketplace (not recommended for large marketplaces):
+Add with a custom name:
 
 ```bash
-caruso sync https://github.com/anthropics/claude-code --target .cursor/rules
+caruso marketplace add https://github.com/anthropics/claude-code claude-official
 ```
 
-## Options
+Supported marketplace sources:
+- **GitHub repositories**: `https://github.com/owner/repo`
+- **Git repositories**: Any Git URL (e.g., `https://gitlab.com/company/plugins.git`)
+- **Local paths**: `./path/to/marketplace` or `./path/to/marketplace.json`
 
-*   `--target`, `-t`: Target directory for rules (default: `.cursor/rules`)
+#### List marketplaces
+
+View all configured marketplaces:
+
+```bash
+caruso marketplace list
+```
+
+#### Remove a marketplace
+
+Remove a marketplace from your configuration:
+
+```bash
+caruso marketplace remove claude-code
+```
+
+<Warning>
+  Removing a marketplace will not automatically uninstall plugins from that marketplace. Uninstall plugins first if you want to remove them.
+</Warning>
+
+### Plugin commands
+
+Discover, install, and manage plugins from configured marketplaces.
+
+#### List available plugins
+
+See all available plugins across configured marketplaces:
+
+```bash
+caruso plugin list
+```
+
+This shows:
+- All plugins from each marketplace
+- Installation status for each plugin
+- Plugin descriptions
+
+#### Install a plugin
+
+Install from a specific marketplace:
+
+```bash
+caruso plugin install frontend-design@claude-code
+```
+
+Install when only one marketplace is configured (marketplace name is optional):
+
+```bash
+caruso plugin install frontend-design
+```
+
+**What happens during installation:**
+1. Fetches plugin files from the marketplace
+2. Scans `commands/`, `agents/`, and `skills/` directories
+3. Converts Claude Plugin Markdown to Cursor Rules (`.mdc` format)
+4. Injects Cursor-specific metadata (e.g., `globs: []`)
+5. Saves converted files to `.cursor/rules/`
+6. Updates `.cursor/rules/caruso.json` manifest
+
+#### Uninstall a plugin
+
+Remove a plugin and update the manifest:
+
+```bash
+caruso plugin uninstall frontend-design
+```
+
+### Complete workflow example
+
+Here's a complete workflow from initialization to plugin installation:
+
+```bash
+# 1. Initialize Caruso in your project
+caruso init --ide=cursor
+
+# 2. Add the official Claude Code marketplace
+caruso marketplace add https://github.com/anthropics/claude-code
+
+# 3. Browse available plugins
+caruso plugin list
+
+# 4. Install a plugin
+caruso plugin install frontend-design@claude-code
+
+# 5. Your Cursor rules are now updated!
+# Files are in .cursor/rules/ and tracked in .cursor/rules/caruso.json
+```
+
+## CLI Reference
+
+### Initialization
+
+```bash
+caruso init [PATH] --ide=IDE
+```
+
+Initialize Caruso in a directory. Creates `.caruso.json` configuration file.
+
+**Arguments:**
+- `PATH` - Project directory (optional, defaults to current directory)
+
+**Options:**
+- `--ide` - Target IDE (required). Currently supported: `cursor`
+
+**Examples:**
+```bash
+caruso init --ide=cursor                    # Initialize current directory
+caruso init . --ide=cursor                  # Explicit current directory
+caruso init /path/to/project --ide=cursor   # Initialize specific directory
+```
+
+### Marketplace Management
+
+```bash
+caruso marketplace add URL [NAME]      # Add a marketplace
+caruso marketplace list                # List configured marketplaces
+caruso marketplace remove NAME         # Remove a marketplace
+```
+
+### Plugin Management
+
+```bash
+caruso plugin list                     # List available and installed plugins
+caruso plugin install PLUGIN[@MARKETPLACE]  # Install a plugin
+caruso plugin uninstall PLUGIN         # Uninstall a plugin
+```
+
+### Version
+
+```bash
+caruso version                         # Print Caruso version
+```
 
 ## How it works
 
-1.  **Fetch**: Caruso resolves the marketplace URI. If it's a Git repo, it clones it.
-2.  **Scan**: It looks for "steering files" within plugins—specifically Markdown files in `commands/`, `agents/`, and `skills/` directories.
-3.  **Adapt**: It reads each file, checks for frontmatter, and injects Cursor-specific metadata (like `globs: []` to enable semantic search).
-4.  **Manage**: It tracks installed plugins in a `caruso.json` manifest file, allowing for easy updates and removal.
+1.  **Init**: Creates `.caruso.json` config with IDE-specific settings (one-time setup)
+2.  **Fetch**: Resolves marketplace URI and clones Git repositories if needed
+3.  **Scan**: Finds "steering files" in `commands/`, `agents/`, and `skills/` directories
+4.  **Adapt**: Converts Claude Plugin Markdown to Cursor Rules (`.mdc`) with metadata injection
+5.  **Manage**: Tracks installations in `.cursor/rules/caruso.json` manifest
 
 ## Development
 
 After checking out the repo, run `bin/setup` to install dependencies. Then, run `rake spec` to run the tests. You can also run `bin/console` for an interactive prompt that will allow you to experiment.
 
 To install this gem onto your local machine, run `bundle exec rake install`.
+
+### Testing
+
+Caruso includes comprehensive test coverage with RSpec integration tests.
+
+#### Run Tests
+
+**Quick test (offline tests only):**
+```bash
+bundle exec rake spec
+```
+
+**All tests including live marketplace integration:**
+```bash
+bundle exec rake spec:all
+# or
+RUN_LIVE_TESTS=true bundle exec rspec
+```
+
+**Only live tests:**
+```bash
+bundle exec rake spec:live
+```
+
+**Run specific test file:**
+```bash
+bundle exec rspec spec/integration/init_spec.rb
+```
+
+#### Test Structure
+
+Integration tests are organized in `spec/integration/`:
+
+- **init_spec.rb** - Initialization and configuration tests
+- **marketplace_spec.rb** - Marketplace management (add, list, remove)
+- **plugin_spec.rb** - Plugin installation and uninstallation
+- **file_validation_spec.rb** - .mdc file structure and manifest validation
+
+#### Live Tests
+
+Tests marked with `:live` tag require network access and interact with the real Claude Code marketplace:
+- Plugin installation
+- File conversion validation
+- Marketplace fetching
+
+To run live tests, set `RUN_LIVE_TESTS=true` or use `rake spec:all`.
+
+#### Test Coverage
+
+✓ **Initialization**
+  - Config file creation and validation
+  - IDE selection
+  - Double-init prevention
+  - Error handling
+
+✓ **Marketplace Management**
+  - Adding marketplaces (GitHub, Git, local)
+  - Listing marketplaces
+  - Removing marketplaces
+  - Manifest structure
+
+✓ **Plugin Management**
+  - Listing available plugins
+  - Installing plugins (explicit/implicit marketplace)
+  - Uninstalling plugins
+  - Installation status tracking
+
+✓ **File Validation**
+  - .mdc file structure (frontmatter, globs, content)
+  - File naming conventions
+  - Manifest accuracy
+  - No orphaned files
+
+For detailed testing documentation, see [TESTING.md](TESTING.md).
 
 ## License
 

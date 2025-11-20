@@ -16,20 +16,14 @@ module Caruso
       FileUtils.mkdir_p(@cache_dir)
     end
 
-    def fetch(plugin_name = nil)
+    def fetch(plugin_name)
       marketplace_data = load_marketplace
       plugins = marketplace_data["plugins"] || []
 
-      if plugin_name
-        plugin = plugins.find { |p| p["name"] == plugin_name }
-        raise "Plugin '#{plugin_name}' not found in marketplace" unless plugin
-        fetch_plugin(plugin)
-      else
-        # Legacy behavior: fetch all
-        plugins.map do |plugin|
-          fetch_plugin(plugin)
-        end.flatten
-      end
+      plugin = plugins.find { |p| p["name"] == plugin_name }
+      raise "Plugin '#{plugin_name}' not found in marketplace" unless plugin
+
+      fetch_plugin(plugin)
     end
 
     def list_available_plugins
@@ -113,9 +107,8 @@ module Caruso
       target_path = File.join(@cache_dir, repo_name)
 
       if Dir.exist?(target_path)
-        # Simple cache: if exists, pull (or just use it)
-        # For now, just use it to avoid git errors
-        # `git -C #{target_path} pull`
+        # Use cached repository
+        target_path
       else
         Git.clone(url, repo_name, path: @cache_dir)
       end

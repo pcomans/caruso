@@ -46,6 +46,32 @@ module Caruso
       data["plugins"] && data["plugins"].key?(name)
     end
 
+    # Marketplace Management
+    def add_marketplace(name, url)
+      data = load_manifest
+      data["marketplaces"] ||= {}
+      data["marketplaces"][name] = url
+      save_manifest(data)
+    end
+
+    def remove_marketplace(name)
+      data = load_manifest
+      return unless data["marketplaces"]
+      data["marketplaces"].delete(name)
+      save_manifest(data)
+    end
+
+    def list_marketplaces
+      data = load_manifest
+      data["marketplaces"] || {}
+    end
+
+    def get_marketplace_url(name)
+      data = load_manifest
+      return nil unless data["marketplaces"]
+      data["marketplaces"][name]
+    end
+
     private
 
     def load_manifest

@@ -4,103 +4,202 @@ require "thor"
 require_relative "../caruso"
 
 module Caruso
-  class CLI < Thor
-    desc "list MARKETPLACE_URI", "List available plugins in a marketplace"
-    method_option :target, aliases: "-t", default: ".cursor/rules", desc: "Target directory"
-    def list(marketplace_uri)
-      fetcher = Caruso::Fetcher.new(marketplace_uri)
-      available = fetcher.list_available_plugins
-      
-      manager = Caruso::ManifestManager.new(options[:target])
-      installed = manager.list_plugins
+  class Marketplace < Thor
+    desc "add URL [NAME]", "Add a marketplace"
+    def add(url, name = nil)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
 
-      puts "Available Plugins:"
-      available.each do |plugin|
-        status = installed.key?(plugin[:name]) ? "[Installed]" : ""
-        puts "  - #{plugin[:name]} #{status}"
-        puts "    #{plugin[:description]}"
+      # Extract name from URL if not provided
+      name ||= url.split("/").last.sub(".git", "")
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      manager.add_marketplace(name, url)
+      puts "Added marketplace '#{name}' from #{url}"
+    end
+
+    desc "list", "List configured marketplaces"
+    def list
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      marketplaces = manager.list_marketplaces
+
+      if marketplaces.empty?
+        puts "No marketplaces configured."
+      else
+        puts "Configured Marketplaces:"
+        marketplaces.each do |name, url|
+          puts "  - #{name}: #{url}"
+        end
       end
     end
 
-    desc "install PLUGIN_NAME MARKETPLACE_URI", "Install a specific plugin"
-    method_option :target, aliases: "-t", default: ".cursor/rules", desc: "Target directory"
-    method_option :agent, aliases: "-a", default: "cursor", desc: "Target agent"
-    def install(plugin_name, marketplace_uri)
-      puts "Installing #{plugin_name}..."
-      
-      fetcher = Caruso::Fetcher.new(marketplace_uri)
+    desc "remove NAME", "Remove a marketplace"
+    def remove(name)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      manager.remove_marketplace(name)
+      puts "Removed marketplace '#{name}'"
+    end
+
+    private
+
+    def load_config
+      Caruso::ConfigManager.new
+    rescue Caruso::Error => e
+      puts "Error: #{e.message}"
+      exit 1
+    end
+  end
+
+  class Plugin < Thor
+    desc "install PLUGIN_NAME", "Install a plugin (format: plugin@marketplace or just plugin)"
+    def install(plugin_ref)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+      ide = config_manager.ide
+
+      plugin_name, marketplace_name = plugin_ref.split("@")
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      marketplaces = manager.list_marketplaces
+
+      marketplace_url = nil
+
+      if marketplace_name
+        marketplace_url = manager.get_marketplace_url(marketplace_name)
+        unless marketplace_url
+          puts "Error: Marketplace '#{marketplace_name}' not found. Add it with 'caruso marketplace add <url>'."
+          return
+        end
+      else
+        # Try to find plugin in any configured marketplace
+        # Or default to the first one if only one exists
+        if marketplaces.empty?
+          puts "Error: No marketplaces configured. Add one with 'caruso marketplace add <url>'."
+          return
+        elsif marketplaces.size == 1
+          marketplace_name = marketplaces.keys.first
+          marketplace_url = marketplaces.values.first
+          puts "Using default marketplace: #{marketplace_name}"
+        else
+          puts "Error: Multiple marketplaces configured. Please specify which one to use: plugin@marketplace"
+          puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
+          return
+        end
+      end
+
+      puts "Installing #{plugin_name} from #{marketplace_name}..."
+
+      fetcher = Caruso::Fetcher.new(marketplace_url)
       files = fetcher.fetch(plugin_name)
-      
+
       if files.empty?
         puts "No steering files found for #{plugin_name}."
         return
       end
 
       adapter = Caruso::Adapter.new(
-        files, 
-        target_dir: options[:target], 
-        agent: options[:agent].to_sym
+        files,
+        target_dir: target_dir,
+        agent: ide.to_sym
       )
       adapter.adapt
 
-      # Update Manifest
-      manager = Caruso::ManifestManager.new(options[:target])
-      # We need to know which files were created. 
-      # For now, Adapter doesn't return them, but we can infer or update Adapter.
-      # Quick fix: Adapter saves files. We can just list what we fetched? 
-      # Actually, Adapter renames files. We should update Adapter to return saved paths.
-      # For this iteration, let's just store the source paths as a proxy or list the target dir.
-      # Better: Let's assume Adapter worked and we store the *source* file list for now, 
-      # or update Adapter to return the list of created files.
-      
-      # Let's update Adapter to return saved files in a future step. 
-      # For now, we'll just record that it's installed.
-      manager.add_plugin(plugin_name, files, marketplace_uri: marketplace_uri)
-      
+      manager.add_plugin(plugin_name, files, marketplace_uri: marketplace_url)
       puts "Installed #{plugin_name}!"
     end
 
-    desc "remove PLUGIN_NAME", "Remove an installed plugin"
-    method_option :target, aliases: "-t", default: ".cursor/rules", desc: "Target directory"
-    def remove(plugin_name)
-      manager = Caruso::ManifestManager.new(options[:target])
-      
+    desc "uninstall PLUGIN_NAME", "Uninstall a plugin"
+    def uninstall(plugin_name)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+
       unless manager.plugin_installed?(plugin_name)
         puts "Plugin #{plugin_name} is not installed."
         return
       end
 
-      # This is tricky because we need to know the *adapted* filenames to delete them.
-      # The manifest currently stores the *source* filenames (from fetcher).
-      # We need to reconstruct the target filename or store the target filename in manifest.
-      # For this MVP, we'll just remove the entry from manifest and warn user.
-      # Ideally, we update Adapter to return target paths and store THOSE in manifest.
-      
       puts "Removing #{plugin_name} from manifest..."
       manager.remove_plugin(plugin_name)
-      puts "Removed #{plugin_name}. Note: Actual files were not deleted in this version (pending Adapter refactor)."
+      puts "Uninstalled #{plugin_name}. (Files pending deletion)"
     end
 
-    desc "sync MARKETPLACE_URI", "Sync all plugins (Legacy)"
-    method_option :target, aliases: "-t", default: ".cursor/rules", desc: "Target directory"
-    method_option :agent, aliases: "-a", default: "cursor", desc: "Target agent"
-    def sync(marketplace_uri)
-      puts "Fetching all from #{marketplace_uri}..."
-      fetcher = Caruso::Fetcher.new(marketplace_uri)
-      files = fetcher.fetch
-      
-      puts "Found #{files.count} steering files."
-      
-      adapter = Caruso::Adapter.new(
-        files, 
-        target_dir: options[:target], 
-        agent: options[:agent].to_sym
-      )
-      adapter.adapt
-      
-      puts "Sync complete!"
+    desc "list", "List available and installed plugins"
+    def list
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      marketplaces = manager.list_marketplaces
+      installed = manager.list_plugins
+
+      if marketplaces.empty?
+        puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
+        return
+      end
+
+      marketplaces.each do |name, url|
+        puts "\nMarketplace: #{name} (#{url})"
+        begin
+          fetcher = Caruso::Fetcher.new(url)
+          available = fetcher.list_available_plugins
+
+          available.each do |plugin|
+            status = installed.key?(plugin[:name]) ? "[Installed]" : ""
+            puts "  - #{plugin[:name]} #{status}"
+            puts "    #{plugin[:description]}"
+          end
+        rescue => e
+          puts "  Error fetching marketplace: #{e.message}"
+        end
+      end
     end
-    
+
+    private
+
+    def load_config
+      Caruso::ConfigManager.new
+    rescue Caruso::Error => e
+      puts "Error: #{e.message}"
+      exit 1
+    end
+  end
+
+  class CLI < Thor
+    desc "init [PATH]", "Initialize Caruso in a directory"
+    method_option :ide, required: true, desc: "Target IDE (currently: cursor)"
+    def init(path = ".")
+      config_manager = Caruso::ConfigManager.new(path)
+
+      begin
+        config = config_manager.init(ide: options[:ide])
+
+        puts "✓ Initialized Caruso for #{config['ide']}"
+        puts "  Project directory: #{config_manager.project_dir}"
+        puts "  Target directory: #{config['target_dir']}"
+        puts "  Config saved to: #{config_manager.config_path}"
+      rescue ArgumentError => e
+        puts "Error: #{e.message}"
+        exit 1
+      rescue Caruso::Error => e
+        puts "Error: #{e.message}"
+        exit 1
+      end
+    end
+
+    desc "marketplace SUBCOMMAND", "Manage marketplaces"
+    subcommand "marketplace", Marketplace
+
+    desc "plugin SUBCOMMAND", "Manage plugins"
+    subcommand "plugin", Plugin
+
     desc "version", "Print version"
     def version
       puts "Caruso v#{Caruso::VERSION}"
