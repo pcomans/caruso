@@ -111,6 +111,7 @@ GEM
       ffi (~> 1.1)
       memoist3 (~> 1.0.0)
     thor (1.4.0)
+    timecop (0.9.10)
     unicode-display_width (3.2.0)
       unicode-emoji (~> 4.1)
     unicode-emoji (4.1.0)
@@ -126,6 +127,7 @@ DEPENDENCIES
   rake (~> 13.0)
   rspec (~> 3.13)
   rubocop (~> 1.60)
+  timecop (~> 0.9)
 
 BUNDLED WITH
    2.6.9

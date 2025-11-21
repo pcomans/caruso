@@ -5,6 +5,7 @@ require "caruso"
 require "fileutils"
 require "json"
 require "aruba/rspec"
+require "timecop"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -15,6 +16,11 @@ RSpec.configure do |config|
 
   config.expect_with :rspec do |c|
     c.syntax = :expect
+  end
+
+  # Reset Timecop after each test
+  config.after(:each) do
+    Timecop.return
   end
 
   # Include Aruba for integration tests
