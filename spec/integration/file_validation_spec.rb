@@ -7,7 +7,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     # Skip init for config file structure tests - they test init itself
     unless self.class.metadata[:skip_init]
       init_caruso
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
     end
   end
 
@@ -20,7 +20,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
     end
 
     it "creates .mdc files" do
@@ -103,7 +103,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
     end
 
     it "uses .mdc extension" do
@@ -126,7 +126,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
   describe "manifest file structure", :skip_init do
     it "creates valid JSON manifest" do
       init_caruso
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
       expect(manifest).to be_a(Hash)
@@ -134,7 +134,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
     it "has marketplaces section" do
       init_caruso
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
       expect(manifest).to have_key("marketplaces")
@@ -148,7 +148,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       manifest = load_manifest
       expect(manifest).to have_key("plugins")
@@ -162,7 +162,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       manifest = load_manifest
       plugin_data = manifest["plugins"][plugin_name]
@@ -180,7 +180,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
       # Validate marketplace URL
       expect(plugin_data["marketplace"]).to be_a(String)
-      expect(plugin_data["marketplace"]).to include("claude-code")
+      expect(plugin_data["marketplace"]).to include("skills")
     end
   end
 

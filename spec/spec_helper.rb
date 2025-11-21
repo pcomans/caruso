@@ -23,6 +23,11 @@ RSpec.configure do |config|
     Timecop.return
   end
 
+  # Clear caruso cache once at start of live test suite (much faster than per-test)
+  config.before(:suite) do
+    FileUtils.rm_rf("/tmp/caruso_cache") if ENV["RUN_LIVE_TESTS"] && File.directory?("/tmp/caruso_cache")
+  end
+
   # Include Aruba for integration tests
   config.include Aruba::Api, type: :integration
 

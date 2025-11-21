@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/claude-code")
+    add_marketplace("https://github.com/anthropics/skills")
   end
 
   describe "plugin reinstallation (update scenario)" do
@@ -17,14 +17,14 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       # Install plugin first time
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       first_install = load_manifest
       first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
 
       # Advance time to ensure timestamp difference
       Timecop.travel(Time.now + 2) do
         # Reinstall the same plugin
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
       end
 
       second_install = load_manifest
@@ -43,11 +43,11 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       # Install plugin
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       first_files = load_manifest["plugins"][plugin_name]["files"]
 
       # Reinstall
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       second_files = load_manifest["plugins"][plugin_name]["files"]
 
       # Files list should be updated (even if identical in this case)
@@ -65,7 +65,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
         "test-plugin" => {
           "installed_at" => "2025-01-01T00:00:00Z",
           "files" => [".cursor/rules/test.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code"
+          "marketplace" => "https://github.com/anthropics/skills"
         }
       }
       File.write(manifest_file, JSON.pretty_generate(manifest))
@@ -89,7 +89,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       manifest = load_manifest
 
       # Check if version info is tracked (implementation may vary)
@@ -104,7 +104,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
         "custom-plugin" => {
           "installed_at" => "2025-01-01T00:00:00Z",
           "files" => [".cursor/rules/custom.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code",
+          "marketplace" => "https://github.com/anthropics/skills",
           "custom_field" => "custom_value"
         }
       }
@@ -186,7 +186,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
     end
 
     it "stores marketplace reference for tracking" do
-      marketplace_url = "https://github.com/anthropics/claude-code"
+      marketplace_url = "https://github.com/anthropics/skills"
 
       manifest = load_manifest
       manifest["plugins"] = {
@@ -233,7 +233,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       # Install
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       expect(load_manifest["plugins"]).to have_key(plugin_name)
 
       # Uninstall
@@ -241,7 +241,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       expect(load_manifest["plugins"]).not_to have_key(plugin_name)
 
       # Reinstall
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       expect(load_manifest["plugins"]).to have_key(plugin_name)
     end
 

@@ -10,41 +10,41 @@ RSpec.describe "Update Functionality", type: :integration do
   describe "caruso marketplace update" do
     context "when marketplace exists" do
       before do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
       end
 
       it "updates a specific marketplace", :live do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
 
         expect(last_command_started).to be_successfully_executed
-        expect(last_command_started).to have_output(/Updated marketplace 'claude-code'/)
+        expect(last_command_started).to have_output(/Updated marketplace 'skills'/)
       end
 
       it "shows confirmation message after updating" do
         # Simulate marketplace update
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
 
-        expect(last_command_started).to have_output(/Updating marketplace 'claude-code'/)
-        expect(last_command_started).to have_output(/Updated marketplace 'claude-code'/)
+        expect(last_command_started).to have_output(/Updating marketplace 'skills'/)
+        expect(last_command_started).to have_output(/Updated marketplace 'skills'/)
       end
 
       it "handles marketplace that doesn't need updating", :live do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
         # Update twice - second should show already up to date
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
         expect(last_command_started).to be_successfully_executed
 
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
         expect(last_command_started).to be_successfully_executed
       end
     end
 
     context "when marketplace does not exist" do
       before do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
       end
 
       it "shows error message" do
@@ -66,7 +66,7 @@ RSpec.describe "Update Functionality", type: :integration do
       it "updates all marketplaces when no name specified", :live do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-        add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
+        add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
         add_marketplace("https://github.com/example/other", "marketplace-2")
 
         run_command("caruso marketplace update")
@@ -82,7 +82,7 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "continues updating other marketplaces if one fails" do
-        add_marketplace("https://github.com/anthropics/claude-code", "good-marketplace")
+        add_marketplace("https://github.com/anthropics/skills", "good-marketplace")
         add_marketplace("https://invalid-url-that-does-not-exist.com/bad", "bad-marketplace")
 
         run_command("caruso marketplace update")
@@ -96,18 +96,18 @@ RSpec.describe "Update Functionality", type: :integration do
       it "refreshes marketplace cache" do
         # This test verifies that the update command refreshes the cached marketplace data
         # In practice, this means git pull on the cached repo
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
 
         expect(last_command_started).to be_successfully_executed
       end
 
       it "updates timestamp of last marketplace fetch" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         before_time = Time.now - 1
-        run_command("caruso marketplace update claude-code")
+        run_command("caruso marketplace update skills")
         after_time = Time.now + 1
 
         # Verify marketplace was updated recently (implementation-specific)
@@ -118,7 +118,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "caruso plugin update" do
     before do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
     end
 
     context "when plugin is installed" do
@@ -130,7 +130,7 @@ RSpec.describe "Update Functionality", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
         expect(last_command_started).to be_successfully_executed
 
         # Update the plugin
@@ -147,7 +147,7 @@ RSpec.describe "Update Functionality", type: :integration do
           "test-plugin" => {
             "installed_at" => "2025-01-01T00:00:00Z",
             "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           }
         }
         File.write(manifest_file, JSON.pretty_generate(manifest))
@@ -165,7 +165,7 @@ RSpec.describe "Update Functionality", type: :integration do
         plugin_name = match ? match[1] : skip("No plugins available")
 
         # Install plugin
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
         first_install = load_manifest
         first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
 
@@ -188,7 +188,7 @@ RSpec.describe "Update Functionality", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
         run_command("caruso plugin update #{plugin_name}")
 
         # Should see marketplace update happening
@@ -201,7 +201,7 @@ RSpec.describe "Update Functionality", type: :integration do
           "test-plugin" => {
             "installed_at" => "2025-01-01T00:00:00Z",
             "files" => [".cursor/rules/old-file.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           }
         }
         File.write(manifest_file, JSON.pretty_generate(manifest))
@@ -220,7 +220,7 @@ RSpec.describe "Update Functionality", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
 
         # Update immediately - should be up to date
         run_command("caruso plugin update #{plugin_name}")
@@ -261,8 +261,8 @@ RSpec.describe "Update Functionality", type: :integration do
         plugins = last_command_started.output.scan(/^\s+-\s+(\S+)/).flatten
         skip("Need at least 2 plugins") if plugins.size < 2
 
-        run_command("caruso plugin install #{plugins[0]}@claude-code")
-        run_command("caruso plugin install #{plugins[1]}@claude-code")
+        run_command("caruso plugin install #{plugins[0]}@skills")
+        run_command("caruso plugin install #{plugins[1]}@skills")
 
         # Update all
         run_command("caruso plugin update --all")
@@ -296,7 +296,7 @@ RSpec.describe "Update Functionality", type: :integration do
           "good-plugin" => {
             "installed_at" => "2025-01-01T00:00:00Z",
             "files" => [".cursor/rules/good.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           },
           "bad-plugin" => {
             "installed_at" => "2025-01-01T00:00:00Z",
@@ -318,12 +318,12 @@ RSpec.describe "Update Functionality", type: :integration do
           "plugin-1" => {
             "installed_at" => "2025-01-01T00:00:00Z",
             "files" => [".cursor/rules/p1.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           },
           "plugin-2" => {
             "installed_at" => "2025-01-01T00:00:00Z",
             "files" => [".cursor/rules/p2.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           }
         }
         File.write(manifest_file, JSON.pretty_generate(manifest))
@@ -367,7 +367,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "caruso plugin outdated" do
     before do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
     end
 
     it "shows plugins with updates available", :live do
@@ -377,7 +377,7 @@ RSpec.describe "Update Functionality", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       run_command("caruso plugin outdated")
 
       expect(last_command_started).to be_successfully_executed
@@ -389,7 +389,7 @@ RSpec.describe "Update Functionality", type: :integration do
         "current-plugin" => {
           "installed_at" => Time.now.iso8601,
           "files" => [".cursor/rules/current.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code",
+          "marketplace" => "https://github.com/anthropics/skills",
           "version" => "1.0.0"
         }
       }
@@ -414,7 +414,7 @@ RSpec.describe "Update Functionality", type: :integration do
         "versioned-plugin" => {
           "installed_at" => "2025-01-01T00:00:00Z",
           "files" => [".cursor/rules/versioned.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code",
+          "marketplace" => "https://github.com/anthropics/skills",
           "version" => "1.0.0"
         }
       }
@@ -433,7 +433,7 @@ RSpec.describe "Update Functionality", type: :integration do
         "plugin-1" => {
           "installed_at" => "2025-01-01T00:00:00Z",
           "files" => [".cursor/rules/p1.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code"
+          "marketplace" => "https://github.com/anthropics/skills"
         },
         "plugin-2" => {
           "installed_at" => "2025-01-01T00:00:00Z",
@@ -451,7 +451,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "update edge cases" do
     before do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
     end
 
     it "handles network failures gracefully" do
@@ -476,7 +476,7 @@ RSpec.describe "Update Functionality", type: :integration do
         "test-plugin" => {
           "installed_at" => "2025-01-01T00:00:00Z",
           "files" => [".cursor/rules/test.mdc"],
-          "marketplace" => "https://github.com/anthropics/claude-code",
+          "marketplace" => "https://github.com/anthropics/skills",
           "custom_field" => "custom_value"
         }
       }

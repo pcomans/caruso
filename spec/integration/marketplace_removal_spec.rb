@@ -10,20 +10,20 @@ RSpec.describe "Marketplace Removal", type: :integration do
   describe "caruso marketplace remove" do
     context "when marketplace exists" do
       it "removes marketplace from manifest" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         # Verify it was added
-        expect(load_manifest["marketplaces"]).to have_key("claude-code")
+        expect(load_manifest["marketplaces"]).to have_key("skills")
 
-        run_command("caruso marketplace remove claude-code")
+        run_command("caruso marketplace remove skills")
 
         expect(last_command_started).to be_successfully_executed
         manifest = load_manifest
-        expect(manifest["marketplaces"]).not_to have_key("claude-code")
+        expect(manifest["marketplaces"]).not_to have_key("skills")
       end
 
       it "shows confirmation message" do
-        add_marketplace("https://github.com/anthropics/claude-code", "test-marketplace")
+        add_marketplace("https://github.com/anthropics/skills", "test-marketplace")
 
         run_command("caruso marketplace remove test-marketplace")
 
@@ -31,7 +31,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "preserves other marketplaces when removing one" do
-        add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
+        add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
         add_marketplace("https://github.com/example/other", "marketplace-2")
         add_marketplace("https://github.com/example/third", "marketplace-3")
 
@@ -50,7 +50,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "does not affect plugins section when removing marketplace" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         # Simulate having a plugin installed
         manifest = load_manifest
@@ -58,16 +58,16 @@ RSpec.describe "Marketplace Removal", type: :integration do
           "test-plugin" => {
             "installed_at" => Time.now.iso8601,
             "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           }
         }
         File.write(manifest_file, JSON.pretty_generate(manifest))
 
-        run_command("caruso marketplace remove claude-code")
+        run_command("caruso marketplace remove skills")
 
         updated_manifest = load_manifest
         expect(updated_manifest["plugins"]).to have_key("test-plugin")
-        expect(updated_manifest["plugins"]["test-plugin"]["marketplace"]).to eq("https://github.com/anthropics/claude-code")
+        expect(updated_manifest["plugins"]["test-plugin"]["marketplace"]).to eq("https://github.com/anthropics/skills")
       end
     end
 
@@ -79,7 +79,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "does not modify manifest when removing non-existent marketplace" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         manifest_before = load_manifest
         run_command("caruso marketplace remove nonexistent")
@@ -91,12 +91,12 @@ RSpec.describe "Marketplace Removal", type: :integration do
 
     context "when removing last marketplace" do
       it "leaves empty marketplaces hash" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         # Verify it was added
-        expect(load_manifest["marketplaces"]).to have_key("claude-code")
+        expect(load_manifest["marketplaces"]).to have_key("skills")
 
-        run_command("caruso marketplace remove claude-code")
+        run_command("caruso marketplace remove skills")
 
         expect(last_command_started).to be_successfully_executed
 
@@ -106,14 +106,14 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "maintains manifest structure with other sections" do
-        add_marketplace("https://github.com/anthropics/claude-code")
+        add_marketplace("https://github.com/anthropics/skills")
 
         # Add a plugin to ensure other sections remain
         manifest = load_manifest
         manifest["plugins"] = { "test" => { "installed_at" => Time.now.iso8601 } }
         File.write(manifest_file, JSON.pretty_generate(manifest))
 
-        run_command("caruso marketplace remove claude-code")
+        run_command("caruso marketplace remove skills")
 
         updated_manifest = load_manifest
         expect(updated_manifest).to have_key("marketplaces")
@@ -131,7 +131,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "lists remaining marketplaces after partial removal" do
-        add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
+        add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
         add_marketplace("https://github.com/example/other", "marketplace-2")
 
         # Verify both were added
@@ -159,7 +159,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
     end
 
     it "handles removal with corrupted marketplace name" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       run_command("caruso marketplace remove 'name with spaces'")
 
@@ -167,7 +167,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
     end
 
     it "preserves marketplace URLs correctly after removal" do
-      add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
+      add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
       add_marketplace("https://github.com/example/plugins.git", "marketplace-2")
 
       run_command("caruso marketplace remove marketplace-1")

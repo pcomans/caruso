@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Management", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/claude-code")
+    add_marketplace("https://github.com/anthropics/skills")
   end
 
   describe "caruso plugin list" do
@@ -13,7 +13,7 @@ RSpec.describe "Plugin Management", type: :integration do
       run_command("caruso plugin list")
 
       expect(last_command_started).to be_successfully_executed
-      expect(last_command_started).to have_output(/Marketplace: claude-code/)
+      expect(last_command_started).to have_output(/Marketplace: skills/)
     end
 
     it "shows when no marketplaces configured" do
@@ -51,19 +51,19 @@ RSpec.describe "Plugin Management", type: :integration do
       # This test doesn't need live access as it fails early
 
       # Ensure we have a marketplace configured
-      add_marketplace("https://github.com/anthropics/claude-code", "claude-official")
+      add_marketplace("https://github.com/anthropics/skills", "claude-official")
 
       run_command("caruso plugin install foo@missing-marketplace")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Error: Marketplace 'missing-marketplace' not found/)
-      expect(last_command_started).to have_output(/Available marketplaces: claude-code, claude-official/)
+      expect(last_command_started).to have_output(/Available marketplaces: skills, claude-official/)
     end
 
     it "installs a plugin with explicit marketplace" do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Installing #{plugin_name}/)
@@ -73,7 +73,7 @@ RSpec.describe "Plugin Management", type: :integration do
     it "updates manifest with plugin info" do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       manifest = load_manifest
       expect(manifest["plugins"]).to have_key(plugin_name)
@@ -85,7 +85,7 @@ RSpec.describe "Plugin Management", type: :integration do
     it "creates .mdc files" do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       expect(mdc_files).not_to be_empty
     end
@@ -93,7 +93,7 @@ RSpec.describe "Plugin Management", type: :integration do
     it "shows installation status in list" do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
       run_command("caruso plugin list")
 
       expect(last_command_started).to have_output(/#{plugin_name}.*\[Installed\]/)
@@ -109,7 +109,7 @@ RSpec.describe "Plugin Management", type: :integration do
     end
 
     it "requires marketplace name when multiple configured" do
-      add_marketplace("https://github.com/anthropics/claude-code", "second-marketplace")
+      add_marketplace("https://github.com/anthropics/skills", "second-marketplace")
 
       run_command("caruso plugin install some-plugin")
 
@@ -120,7 +120,7 @@ RSpec.describe "Plugin Management", type: :integration do
 
     it "handles non-existent plugin gracefully" do
       # Ensure we have a marketplace with known plugins
-      add_marketplace("https://github.com/anthropics/claude-code", "claude-official")
+      add_marketplace("https://github.com/anthropics/skills", "claude-official")
 
       run_command("caruso plugin install totally-fake-plugin-xyz@claude-official")
 
@@ -145,7 +145,7 @@ RSpec.describe "Plugin Management", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_command("caruso plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@skills")
 
       # Then uninstall it
       run_command("caruso plugin uninstall #{plugin_name}")

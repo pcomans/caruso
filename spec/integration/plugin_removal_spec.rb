@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Removal", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/claude-code")
+    add_marketplace("https://github.com/anthropics/skills")
   end
 
   describe "caruso plugin uninstall" do
@@ -18,7 +18,7 @@ RSpec.describe "Plugin Removal", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
         expect(load_manifest["plugins"]).to have_key(plugin_name)
 
         # Uninstall it
@@ -35,7 +35,7 @@ RSpec.describe "Plugin Removal", type: :integration do
           "test-plugin" => {
             "installed_at" => Time.now.iso8601,
             "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/claude-code"
+            "marketplace" => "https://github.com/anthropics/skills"
           }
         }
         File.write(manifest_file, JSON.pretty_generate(manifest))
@@ -135,7 +135,7 @@ RSpec.describe "Plugin Removal", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@claude-code")
+        run_command("caruso plugin install #{plugin_name}@skills")
         run_command("caruso plugin uninstall #{plugin_name}")
         run_command("caruso plugin list")
 

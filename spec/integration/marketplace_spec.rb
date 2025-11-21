@@ -9,29 +9,29 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "caruso marketplace add" do
     it "adds a marketplace from GitHub URL" do
-      run_command("caruso marketplace add https://github.com/anthropics/claude-code")
+      run_command("caruso marketplace add https://github.com/anthropics/skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Added marketplace/)
-      expect(last_command_started).to have_output(/claude-code/)
+      expect(last_command_started).to have_output(/skills/)
     end
 
     it "creates manifest file" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       expect(File.exist?(manifest_file)).to be true
     end
 
     it "registers marketplace in manifest" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("claude-code")
-      expect(manifest["marketplaces"]["claude-code"]).to include("claude-code")
+      expect(manifest["marketplaces"]).to have_key("skills")
+      expect(manifest["marketplaces"]["skills"]).to include("skills")
     end
 
     it "adds marketplace with custom name" do
-      run_command("caruso marketplace add https://github.com/anthropics/claude-code custom-name")
+      run_command("caruso marketplace add https://github.com/anthropics/skills custom-name")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/custom-name/)
@@ -41,19 +41,19 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "extracts name from URL if not provided" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("claude-code")
+      expect(manifest["marketplaces"]).to have_key("skills")
     end
 
     it "handles .git extension in URL" do
-      run_command("caruso marketplace add https://github.com/anthropics/claude-code.git")
+      run_command("caruso marketplace add https://github.com/anthropics/skills.git")
 
       expect(last_command_started).to be_successfully_executed
 
       manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("claude-code")
+      expect(manifest["marketplaces"]).to have_key("skills")
     end
   end
 
@@ -66,19 +66,19 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "lists configured marketplaces" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       run_command("caruso marketplace list")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Configured Marketplaces:/)
-      expect(last_command_started).to have_output(/claude-code/)
-      expect(last_command_started).to have_output(%r{github\.com/anthropics/claude-code})
+      expect(last_command_started).to have_output(/skills/)
+      expect(last_command_started).to have_output(%r{github\.com/anthropics/skills})
     end
 
     it "lists multiple marketplaces" do
-      add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
-      add_marketplace("https://github.com/anthropics/claude-code", "marketplace-2")
+      add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
+      add_marketplace("https://github.com/anthropics/skills", "marketplace-2")
 
       run_command("caruso marketplace list")
 
@@ -89,15 +89,15 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "caruso marketplace remove" do
     it "removes a marketplace" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
-      run_command("caruso marketplace remove claude-code")
+      run_command("caruso marketplace remove skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Removed marketplace/)
 
       manifest = load_manifest
-      expect(manifest["marketplaces"]).not_to have_key("claude-code")
+      expect(manifest["marketplaces"]).not_to have_key("skills")
     end
 
     it "handles removing non-existent marketplace gracefully" do
@@ -109,7 +109,7 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "marketplace manifest structure" do
     it "creates proper JSON structure" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
       expect(manifest).to be_a(Hash)
@@ -117,7 +117,7 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "maintains plugins section separately" do
-      add_marketplace("https://github.com/anthropics/claude-code")
+      add_marketplace("https://github.com/anthropics/skills")
 
       manifest = load_manifest
       expect(manifest.keys).to include("marketplaces")
