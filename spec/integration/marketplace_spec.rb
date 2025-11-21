@@ -9,11 +9,11 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "caruso marketplace add" do
     it "adds a marketplace from GitHub URL" do
-      result = run_caruso("marketplace add https://github.com/anthropics/claude-code")
+      run_command("caruso marketplace add https://github.com/anthropics/claude-code")
 
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:output]).to include("Added marketplace")
-      expect(result[:output]).to include("claude-code")
+      expect(last_command_started).to be_successfully_executed
+      expect(last_command_started).to have_output(/Added marketplace/)
+      expect(last_command_started).to have_output(/claude-code/)
     end
 
     it "creates manifest file" do
@@ -31,10 +31,10 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "adds marketplace with custom name" do
-      result = run_caruso("marketplace add https://github.com/anthropics/claude-code custom-name")
+      run_command("caruso marketplace add https://github.com/anthropics/claude-code custom-name")
 
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:output]).to include("custom-name")
+      expect(last_command_started).to be_successfully_executed
+      expect(last_command_started).to have_output(/custom-name/)
 
       manifest = load_manifest
       expect(manifest["marketplaces"]).to have_key("custom-name")
@@ -48,9 +48,9 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "handles .git extension in URL" do
-      result = run_caruso("marketplace add https://github.com/anthropics/claude-code.git")
+      run_command("caruso marketplace add https://github.com/anthropics/claude-code.git")
 
-      expect(result[:exit_code]).to eq(0)
+      expect(last_command_started).to be_successfully_executed
 
       manifest = load_manifest
       expect(manifest["marketplaces"]).to have_key("claude-code")
@@ -59,31 +59,31 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "caruso marketplace list" do
     it "shows no marketplaces when empty" do
-      result = run_caruso("marketplace list")
+      run_command("caruso marketplace list")
 
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:output]).to include("No marketplaces configured")
+      expect(last_command_started).to be_successfully_executed
+      expect(last_command_started).to have_output(/No marketplaces configured/)
     end
 
     it "lists configured marketplaces" do
       add_marketplace("https://github.com/anthropics/claude-code")
 
-      result = run_caruso("marketplace list")
+      run_command("caruso marketplace list")
 
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:output]).to include("Configured Marketplaces:")
-      expect(result[:output]).to include("claude-code")
-      expect(result[:output]).to include("github.com/anthropics/claude-code")
+      expect(last_command_started).to be_successfully_executed
+      expect(last_command_started).to have_output(/Configured Marketplaces:/)
+      expect(last_command_started).to have_output(/claude-code/)
+      expect(last_command_started).to have_output(/github\.com\/anthropics\/claude-code/)
     end
 
     it "lists multiple marketplaces" do
       add_marketplace("https://github.com/anthropics/claude-code", "marketplace-1")
       add_marketplace("https://github.com/anthropics/claude-code", "marketplace-2")
 
-      result = run_caruso("marketplace list")
+      run_command("caruso marketplace list")
 
-      expect(result[:output]).to include("marketplace-1")
-      expect(result[:output]).to include("marketplace-2")
+      expect(last_command_started).to have_output(/marketplace-1/)
+      expect(last_command_started).to have_output(/marketplace-2/)
     end
   end
 
@@ -91,19 +91,19 @@ RSpec.describe "Marketplace Management", type: :integration do
     it "removes a marketplace" do
       add_marketplace("https://github.com/anthropics/claude-code")
 
-      result = run_caruso("marketplace remove claude-code")
+      run_command("caruso marketplace remove claude-code")
 
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:output]).to include("Removed marketplace")
+      expect(last_command_started).to be_successfully_executed
+      expect(last_command_started).to have_output(/Removed marketplace/)
 
       manifest = load_manifest
       expect(manifest["marketplaces"]).not_to have_key("claude-code")
     end
 
     it "handles removing non-existent marketplace gracefully" do
-      result = run_caruso("marketplace remove nonexistent")
+      run_command("caruso marketplace remove nonexistent")
 
-      expect(result[:exit_code]).to eq(0)
+      expect(last_command_started).to be_successfully_executed
     end
   end
 

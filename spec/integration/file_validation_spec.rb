@@ -13,14 +13,14 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
   describe ".mdc file structure", :live do
     let(:plugin_name) do
-      result = run_caruso("plugin list")
-      match = result[:output].match(/^\s+-\s+(\S+)/)
+      run_command("caruso plugin list")
+      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       match ? match[1] : skip("No plugins available in marketplace")
     end
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-      run_caruso("plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@claude-code")
     end
 
     it "creates .mdc files" do
@@ -75,7 +75,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       tracked_files = manifest.dig("plugins", plugin_name, "files") || []
 
       tracked_files.each do |tracked_file|
-        full_path = File.join(test_dir, tracked_file)
+        full_path = File.join(aruba.current_directory, tracked_file)
         expect(File.exist?(full_path)).to be(true),
           "Tracked file #{tracked_file} should exist"
       end
@@ -96,14 +96,14 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
   describe "file naming conventions", :live do
     let(:plugin_name) do
-      result = run_caruso("plugin list")
-      match = result[:output].match(/^\s+-\s+(\S+)/)
+      run_command("caruso plugin list")
+      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       match ? match[1] : skip("No plugins available in marketplace")
     end
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-      run_caruso("plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@claude-code")
     end
 
     it "uses .mdc extension" do
@@ -144,11 +144,11 @@ RSpec.describe "File Conversion Validation", type: :integration do
     it "creates plugins section when plugin installed", :live do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      result = run_caruso("plugin list")
-      match = result[:output].match(/^\s+-\s+(\S+)/)
+      run_command("caruso plugin list")
+      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_caruso("plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@claude-code")
 
       manifest = load_manifest
       expect(manifest).to have_key("plugins")
@@ -158,11 +158,11 @@ RSpec.describe "File Conversion Validation", type: :integration do
     it "includes required plugin metadata", :live do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-      result = run_caruso("plugin list")
-      match = result[:output].match(/^\s+-\s+(\S+)/)
+      run_command("caruso plugin list")
+      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
 
-      run_caruso("plugin install #{plugin_name}@claude-code")
+      run_command("caruso plugin install #{plugin_name}@claude-code")
 
       manifest = load_manifest
       plugin_data = manifest["plugins"][plugin_name]

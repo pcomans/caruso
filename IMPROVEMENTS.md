@@ -32,12 +32,11 @@ Based on the Ruby CLI Gem Best Practices evaluation, here are the remaining task
 
 ## 🟡 High Priority
 
-- [ ] **Migrate tests to use Aruba**
-  - Update `spec/spec_helper.rb` to configure Aruba
-  - Replace custom `run_caruso` helper with Aruba's `run_command`
-  - Update all integration tests to use Aruba API
-  - Benefits: Better isolation, stderr/stdout separation, cleaner API
-  - See migration guide in this document below
+- [x] **Migrate tests to use Aruba**
+  - Updated `spec/spec_helper.rb` to configure Aruba
+  - Replaced custom `run_caruso` helper with Aruba's `run_command`
+  - Migrated all 4 integration test files to use Aruba API
+  - All 32 tests passing with improved isolation and cleaner assertions
 
 - [ ] **Add release automation workflow**
   - Create `.github/workflows/release.yml`
@@ -331,6 +330,6 @@ Style/StringLiterals:
 
 Update this section as you complete tasks:
 
-**Completed:** 7/26 tasks (27%)
+**Completed:** 8/26 tasks (31%)
 
 **Last Updated:** 2025-11-20

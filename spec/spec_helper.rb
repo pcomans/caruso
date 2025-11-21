@@ -4,7 +4,7 @@ require "bundler/setup"
 require "caruso"
 require "fileutils"
 require "json"
-require "tmpdir"
+require "aruba/rspec"
 
 RSpec.configure do |config|
   # Enable flags like --only-failures and --next-failure
@@ -17,35 +17,17 @@ RSpec.configure do |config|
     c.syntax = :expect
   end
 
-  # Helper method to create isolated test directories
-  config.around(:each) do |example|
-    Dir.mktmpdir("caruso-test-") do |dir|
-      @test_dir = dir
-      Dir.chdir(dir) do
-        example.run
-      end
-    end
-  end
+  # Include Aruba for integration tests
+  config.include Aruba::Api, type: :integration
 
   # Helper methods available in all specs
   config.include(Module.new do
-    def test_dir
-      @test_dir
-    end
-
-    def run_caruso(*args)
-      # Run caruso command and capture output
-      cmd = "caruso #{args.join(' ')}"
-      output = `#{cmd} 2>&1`
-      { output: output, exit_code: $?.exitstatus }
-    end
-
     def config_file
-      File.join(test_dir, ".caruso.json")
+      File.join(aruba.current_directory, ".caruso.json")
     end
 
     def manifest_file
-      File.join(test_dir, ".cursor", "rules", "caruso.json")
+      File.join(aruba.current_directory, ".cursor", "rules", "caruso.json")
     end
 
     def load_config
@@ -57,18 +39,25 @@ RSpec.configure do |config|
     end
 
     def mdc_files
-      Dir.glob(File.join(test_dir, ".cursor", "rules", "*.mdc"))
+      Dir.glob(File.join(aruba.current_directory, ".cursor", "rules", "*.mdc"))
     end
 
     def init_caruso(ide: "cursor")
-      result = run_caruso("init --ide=#{ide}")
-      expect(result[:exit_code]).to eq(0), "Init failed: #{result[:output]}"
+      run_command("caruso init --ide=#{ide}")
+      expect(last_command_started).to be_successfully_executed
     end
 
     def add_marketplace(url, name = nil)
       cmd = name ? "marketplace add #{url} #{name}" : "marketplace add #{url}"
-      result = run_caruso(cmd)
-      expect(result[:exit_code]).to eq(0), "Add marketplace failed: #{result[:output]}"
+      run_command("caruso #{cmd}")
+      expect(last_command_started).to be_successfully_executed
     end
   end)
+end
+
+# Configure Aruba
+Aruba.configure do |config|
+  # Set command timeout (default is 3 seconds, increase if needed)
+  config.exit_timeout = 10
+  config.io_wait_timeout = 5
 end
