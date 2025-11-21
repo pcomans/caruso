@@ -7,12 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2025-11-21
+
 ### Added
+- Support for custom component paths in marketplace entries (`commands`, `agents`, `skills` arrays)
+- Comprehensive unit test suite for fetcher with 9 tests covering all component types
+- Support for both string and array formats for custom component paths
+- File deduplication when paths appear in both default and custom locations
+
+### Changed
+- Fetcher now handles custom paths for all component types (commands, agents, skills) consistently
+- Custom paths now supplement (rather than replace) default directories as per specification
+- Test suite improvements with better success assertions and deterministic timing
+
+### Fixed
+- Plugin installation from anthropics/skills marketplace now works correctly
+- Integration tests reduced from 17 failures to 0 with proper assertions
+- Test isolation issues resolved for more reliable test runs
+
+### Added (Development)
 - Aruba for professional CLI testing
 - RuboCop as development dependency for code quality
 - Comprehensive improvement checklist in IMPROVEMENTS.md
 
-### Changed
+### Changed (Development)
 - Consolidated all dependencies to gemspec (removed duplication in Gemfile)
 - Updated RSpec to 3.13 for consistency
 - Simplified Gemfile to only contain source and gemspec
@@ -73,7 +91,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic conversion of Claude Code plugins to Cursor Rules format
 - Plugin metadata preservation and frontmatter injection
 
-[Unreleased]: https://github.com/pcomans/caruso/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/pcomans/caruso/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/pcomans/caruso/releases/tag/v0.1.4
 [0.1.3]: https://github.com/pcomans/caruso/releases/tag/v0.1.3
 [0.1.2]: https://github.com/pcomans/caruso/releases/tag/v0.1.2
 [0.1.1]: https://github.com/pcomans/caruso/releases/tag/v0.1.1
