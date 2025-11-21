@@ -1,0 +1,249 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Mission
+
+Caruso is a Ruby gem CLI that bridges the gap between AI coding assistants. It fetches "steering documentation" (commands, agents, skills) from Claude Code Marketplaces and converts them to formats compatible with other IDEs, currently Cursor.
+
+## Source of Truth: Claude Code Documentation
+
+**IMPORTANT:** The official Claude Code marketplace and plugin specifications are located in `/Users/philipp/code/caruso/reference/`:
+
+- `marketplace.md` - Marketplace structure and specification
+- `plugins.md` - Plugin format and configuration
+- `plugins_reference.md` - Component configuration fields and metadata
+
+**These reference documents are the authoritative source for:**
+- Marketplace.json schema and plugin metadata format
+- Component configuration fields (`commands`, `agents`, `skills`, `hooks`, `mcpServers`)
+- Expected directory structures and file patterns
+- Metadata requirements and validation rules
+
+When implementing features or fixing bugs related to marketplace compatibility, **always consult these reference files first**. If the implementation conflicts with the reference docs, the reference docs are correct and the code should be updated to match.
+
+## Development Commands
+
+### Build and Install
+```bash
+# Build the gem
+gem build caruso.gemspec
+
+# Install locally
+gem install caruso-*.gem
+
+# Verify installation
+caruso version
+```
+
+### Testing
+```bash
+# Run offline tests only (default)
+bundle exec rake spec
+# or
+bundle exec rspec
+
+# Run all tests including live marketplace integration
+bundle exec rake spec:all
+# or
+RUN_LIVE_TESTS=1 bundle exec rspec
+
+# Run only live tests
+bundle exec rake spec:live
+
+# Run specific test file
+bundle exec rspec spec/integration/plugin_spec.rb
+
+# Run specific test
+bundle exec rspec spec/integration/plugin_spec.rb:42
+```
+
+**Important:** Live tests (tagged with `:live`) interact with real marketplaces (anthropics/skills) and require network access. They can be slow (~7 minutes). Marketplace cache is stored in `/tmp/caruso_cache/`.
+
+### Linting
+```bash
+bundle exec rubocop
+```
+
+### Version Management
+```bash
+# Bump patch version (0.1.3 → 0.1.4)
+bundle exec rake bump:patch
+
+# Bump minor version (0.1.4 → 0.2.0)
+bundle exec rake bump:minor
+
+# Bump major version (0.1.4 → 1.0.0)
+bundle exec rake bump:major
+```
+
+## Architecture
+
+### Core Pipeline: Fetch → Adapt → Track
+
+Caruso follows a three-stage pipeline for plugin management:
+
+1. **Fetch** (`Fetcher`) - Clones Git repositories, resolves marketplace.json, finds plugin markdown files
+2. **Adapt** (`Adapter`) - Converts Claude Code markdown to target IDE format with metadata injection
+3. **Track** (`ManifestManager`) - Records installations in target IDE's caruso.json manifest
+
+### Key Components
+
+#### ConfigManager (`lib/caruso/config_manager.rb`)
+Manages `.caruso.json` in project root. Contains:
+- `ide`: Target IDE (currently only "cursor" supported)
+- `target_dir`: Where to write converted files (`.cursor/rules` for Cursor)
+- `initialized_at`: ISO8601 timestamp
+- `version`: Config schema version
+
+Must run `caruso init --ide=cursor` before other commands. ConfigManager validates IDE support and prevents double-initialization.
+
+#### ManifestManager (`lib/caruso/manifest_manager.rb`)
+Manages `caruso.json` in target IDE directory (e.g., `.cursor/rules/caruso.json`). Contains:
+- `marketplaces`: Name → URL mapping of added marketplaces
+- `plugins`: Name → metadata mapping of installed plugins
+  - `installed_at`: ISO8601 timestamp
+  - `files`: Array of relative file paths (e.g., `[".cursor/rules/document-skills.mdc"]`)
+  - `marketplace`: Source marketplace URL
+
+This manifest tracks what's installed and where it came from. Used for uninstall, update, and status tracking.
+
+#### Fetcher (`lib/caruso/fetcher.rb`)
+Resolves and fetches plugins from marketplaces. Supports:
+- GitHub repos: `https://github.com/owner/repo`
+- Git URLs: Any Git-cloneable URL
+- Local paths: `./path/to/marketplace` or `./path/to/marketplace.json`
+
+**Key behavior:**
+- Clones Git repos to `/tmp/caruso_cache/<repo-name>/` (persistent between runs)
+- Reads `marketplace.json` to find available plugins
+- Supports custom component paths: plugins can specify `commands`, `agents`, `skills` arrays pointing to non-standard locations
+- Scans standard directories: `{commands,agents,skills}/**/*.md`
+- Excludes README.md and LICENSE.md files
+- **Custom paths supplement (not replace) default directories** - this is critical
+
+**marketplace.json structure:**
+```json
+{
+  "plugins": [
+    {
+      "name": "document-skills",
+      "description": "Work with documents",
+      "source": "./document-skills",
+      "skills": ["./document-skills/xlsx", "./document-skills/pdf"]
+    }
+  ]
+}
+```
+
+The `commands`, `agents`, and `skills` fields accept:
+- String: `"./custom/path"`
+- Array: `["./path1", "./path2"]`
+
+Both files and directories are supported. Fetcher recursively finds all `.md` files.
+
+#### Adapter (`lib/caruso/adapter.rb`)
+Converts Claude Code markdown files to target IDE format. For Cursor:
+- Renames `.md` → `.mdc`
+- Injects YAML frontmatter with required Cursor metadata:
+  - `globs: []` - Enables semantic search (Apply Intelligently)
+  - `alwaysApply: false` - Prevents auto-application to every chat
+  - `description` - Preserved from original or generated
+- Preserves existing frontmatter if present, adds missing fields
+- Handles special case: `SKILL.md` → named after parent directory to avoid collisions
+
+Returns array of created filenames (not full paths) for manifest tracking.
+
+#### CLI (`lib/caruso/cli.rb`)
+Thor-based CLI with nested commands:
+- `caruso init [PATH] --ide=cursor`
+- `caruso marketplace add|list|remove|update`
+- `caruso plugin install|uninstall|list|update|outdated`
+
+**Important patterns:**
+- All commands except `init` require existing `.caruso.json` (enforced by `load_config` helper)
+- Plugin install format: `plugin@marketplace` or just `plugin` (if only one marketplace configured)
+- Update commands refresh marketplace cache (git pull) before fetching latest plugin files
+- Errors use descriptive messages with suggestions (e.g., "use 'caruso marketplace add <url>'")
+
+### Data Flow Example
+
+User runs: `caruso plugin install document-skills@skills`
+
+1. **CLI** parses command, loads config from `.caruso.json`
+2. **ManifestManager** looks up marketplace "skills" URL from `.cursor/rules/caruso.json`
+3. **Fetcher** clones/updates marketplace repo to `/tmp/caruso_cache/skills/`
+4. **Fetcher** reads `marketplace.json`, finds document-skills plugin
+5. **Fetcher** scans standard directories + custom paths from `skills: [...]` array
+6. **Fetcher** returns list of `.md` file paths
+7. **Adapter** converts each file: adds frontmatter, renames to `.mdc`, writes to `.cursor/rules/`
+8. **Adapter** returns created filenames
+9. **ManifestManager** records plugin in manifest with file list and marketplace URL
+10. **CLI** prints success message
+
+### Testing Architecture
+
+Uses **Aruba** for CLI integration testing. Test structure:
+- `spec/unit/` - Direct class testing (ConfigManager, Fetcher logic)
+- `spec/integration/` - Full CLI workflow tests via Aruba subprocess execution
+
+**Aruba helpers in spec_helper.rb:**
+- `init_caruso(ide: "cursor")` - Runs init command with success assertion
+- `add_marketplace(url, name)` - Adds marketplace with success assertion
+- `config_file`, `manifest_file`, `load_config`, `load_manifest` - File access helpers
+- `mdc_files` - Glob for `.cursor/rules/*.mdc` files
+
+**Critical testing pattern:**
+```ruby
+run_command("caruso plugin install foo@bar")
+expect(last_command_started).to be_successfully_executed  # Always verify success first!
+manifest = load_manifest  # Then access results
+```
+
+**Why this matters:** If command fails, manifest might not exist (nil). Always assert success before accessing command results to prevent confusing test failures.
+
+**Live tests:**
+- Tagged with `:live` metadata
+- Run only when `RUN_LIVE_TESTS=1` environment variable set
+- Interact with real anthropics/skills marketplace
+- Cache cleared once at test suite start for performance
+- Use `sleep` for timestamp resolution (not `Timecop`) because Caruso runs as subprocess
+
+**Timecop limitation:** Cannot mock time in subprocesses. When testing timestamp updates in plugin reinstall scenarios, use `sleep 1.1` (ISO8601 has second precision) instead of `Timecop.travel`.
+
+## Marketplace Compatibility
+
+Caruso supports the Claude Code marketplace specification with custom component paths:
+
+- Standard structure: `{commands,agents,skills}/**/*.md`
+- Custom paths: `"commands": ["./custom/path"]` in marketplace.json
+- Both string and array formats supported
+- Custom paths **supplement** defaults (they don't replace)
+
+Example: anthropics/skills marketplace uses custom paths:
+```json
+{
+  "name": "document-skills",
+  "skills": ["./document-skills/xlsx", "./document-skills/pdf"]
+}
+```
+
+Fetcher will scan both:
+1. `./document-skills/skills/**/*.md` (default)
+2. `./document-skills/xlsx/**/*.md` (custom)
+3. `./document-skills/pdf/**/*.md` (custom)
+
+Results are deduplicated with `.uniq`.
+
+## Release Process
+
+1. Run tests: `bundle exec rake spec:all`
+2. Bump version: `bundle exec rake bump:patch` (or minor/major)
+3. Update CHANGELOG.md with release notes
+4. Commit: `git commit -m "chore: Bump version to X.Y.Z"`
+5. Tag: `git tag -a vX.Y.Z -m "Release version X.Y.Z"`
+6. Build: `gem build caruso.gemspec`
+7. Install and test: `gem install caruso-X.Y.Z.gem && caruso version`
+8. Push: `git push origin main --tags`
+
+Version is managed in `lib/caruso/version.rb`.
