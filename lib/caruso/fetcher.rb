@@ -41,6 +41,39 @@ module Caruso
       end
     end
 
+    def update_cache
+      # For git-based marketplaces, update the cached repository
+      if github_repo?
+        url = if @marketplace_uri.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+})
+                @marketplace_uri
+              else
+                "https://github.com/#{@marketplace_uri}.git"
+              end
+
+        repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
+        target_path = File.join(@cache_dir, repo_name)
+
+        if Dir.exist?(target_path)
+          # Update existing repository
+          begin
+            git = Git.open(target_path)
+            git.pull
+          rescue StandardError => e
+            raise "Failed to update marketplace cache: #{e.message}"
+          end
+        else
+          # Clone if not cached yet
+          Git.clone(url, repo_name, path: @cache_dir)
+        end
+      elsif local_path?
+        # Local paths don't need updating
+        nil
+      else
+        # Remote JSON files don't need caching
+        nil
+      end
+    end
+
     private
 
     def load_marketplace

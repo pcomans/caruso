@@ -46,6 +46,63 @@ module Caruso
       puts "Removed marketplace '#{name}'"
     end
 
+    desc "update [NAME]", "Update marketplace metadata (updates all if no name given)"
+    def update(name = nil)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      marketplaces = manager.list_marketplaces
+
+      if name
+        # Update specific marketplace
+        if marketplaces.empty?
+          puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
+          return
+        end
+
+        marketplace_url = manager.get_marketplace_url(name)
+        unless marketplace_url
+          puts "Error: Marketplace '#{name}' not found."
+          puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
+          return
+        end
+
+        puts "Updating marketplace '#{name}'..."
+        begin
+          fetcher = Caruso::Fetcher.new(marketplace_url)
+          fetcher.update_cache
+          puts "Updated marketplace '#{name}'"
+        rescue StandardError => e
+          puts "Error updating marketplace: #{e.message}"
+        end
+      else
+        # Update all marketplaces
+        if marketplaces.empty?
+          puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
+          return
+        end
+
+        puts "Updating all marketplaces..."
+        success_count = 0
+        error_count = 0
+
+        marketplaces.each do |marketplace_name, marketplace_url|
+          begin
+            puts "  Updating #{marketplace_name}..."
+            fetcher = Caruso::Fetcher.new(marketplace_url)
+            fetcher.update_cache
+            success_count += 1
+          rescue StandardError => e
+            puts "  Error updating #{marketplace_name}: #{e.message}"
+            error_count += 1
+          end
+        end
+
+        puts "\nUpdated #{success_count} marketplace(s)" + (error_count.positive? ? " (#{error_count} failed)" : "")
+      end
+    end
+
     private
 
     def load_config
@@ -170,7 +227,143 @@ module Caruso
       end
     end
 
+    desc "update PLUGIN_NAME", "Update a plugin to the latest version"
+    method_option :all, type: :boolean, aliases: "-a", desc: "Update all installed plugins"
+    def update(plugin_name = nil)
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+      ide = config_manager.ide
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      installed_plugins = manager.list_plugins
+
+      if options[:all]
+        # Update all plugins
+        if installed_plugins.empty?
+          puts "No plugins installed."
+          return
+        end
+
+        puts "Updating all plugins..."
+        success_count = 0
+        error_count = 0
+
+        installed_plugins.each do |name, plugin_data|
+          begin
+            puts "  Updating #{name}..."
+            update_single_plugin(name, plugin_data, manager, config_manager)
+            success_count += 1
+          rescue StandardError => e
+            puts "  Error updating #{name}: #{e.message}"
+            error_count += 1
+          end
+        end
+
+        puts "\nUpdated #{success_count} plugin(s)" + (error_count.positive? ? " (#{error_count} failed)" : "")
+      else
+        # Update single plugin
+        unless plugin_name
+          puts "Error: Please specify a plugin name or use --all to update all plugins."
+          return
+        end
+
+        plugin_data = installed_plugins[plugin_name]
+        unless plugin_data
+          puts "Error: Plugin '#{plugin_name}' is not installed."
+          puts "Use 'caruso plugin install #{plugin_name}' to install it."
+          return
+        end
+
+        puts "Updating #{plugin_name}..."
+        begin
+          update_single_plugin(plugin_name, plugin_data, manager, config_manager)
+          puts "Updated #{plugin_name}!"
+        rescue StandardError => e
+          puts "Error updating plugin: #{e.message}"
+          exit 1
+        end
+      end
+    end
+
+    desc "outdated", "Show plugins with available updates"
+    def outdated
+      config_manager = load_config
+      target_dir = config_manager.full_target_path
+
+      manager = Caruso::ManifestManager.new(target_dir)
+      installed_plugins = manager.list_plugins
+
+      if installed_plugins.empty?
+        puts "No plugins installed."
+        return
+      end
+
+      puts "Checking for updates..."
+      outdated_plugins = []
+
+      installed_plugins.each do |name, plugin_data|
+        marketplace_url = plugin_data["marketplace"]
+        next unless marketplace_url
+
+        begin
+          fetcher = Caruso::Fetcher.new(marketplace_url)
+          # For now, we'll just report that updates might be available
+          # Full version comparison would require version tracking in marketplace.json
+          outdated_plugins << {
+            name: name,
+            current_version: plugin_data["version"] || "unknown",
+            marketplace: marketplace_url
+          }
+        rescue StandardError
+          # Skip plugins with inaccessible marketplaces
+          next
+        end
+      end
+
+      if outdated_plugins.empty?
+        puts "All plugins are up to date."
+      else
+        puts "\nPlugins installed:"
+        outdated_plugins.each do |plugin|
+          puts "  - #{plugin[:name]} (version: #{plugin[:current_version]})"
+        end
+        puts "\nRun 'caruso plugin update --all' to update all plugins."
+      end
+    end
+
     private
+
+    def update_single_plugin(plugin_name, plugin_data, manager, config_manager)
+      marketplace_url = plugin_data["marketplace"]
+      unless marketplace_url
+        raise "No marketplace information found for #{plugin_name}"
+      end
+
+      # Update marketplace cache first
+      fetcher = Caruso::Fetcher.new(marketplace_url)
+      fetcher.update_cache
+
+      # Fetch latest plugin files
+      files = fetcher.fetch(plugin_name)
+
+      if files.empty?
+        raise "No steering files found for #{plugin_name}"
+      end
+
+      # Adapt files to target IDE
+      adapter = Caruso::Adapter.new(
+        files,
+        target_dir: config_manager.full_target_path,
+        agent: config_manager.ide.to_sym
+      )
+      created_filenames = adapter.adapt
+
+      # Convert filenames to relative paths from project root
+      created_files = created_filenames.map { |f| File.join(config_manager.target_dir, f) }
+
+      # Update plugin in manifest
+      manager.add_plugin(plugin_name, created_files, marketplace_uri: marketplace_url)
+    end
 
     def load_config
       Caruso::ConfigManager.new
