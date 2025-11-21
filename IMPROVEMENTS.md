@@ -14,18 +14,17 @@ Based on the Ruby CLI Gem Best Practices evaluation, here are the remaining task
 
 ## 🔴 Critical Priority (Do First)
 
-- [ ] **Add GitHub Actions CI workflow**
+- [ ] **Add GitHub Actions CI workflow** _(Deferred for later)_
   - Create `.github/workflows/ci.yml`
   - Test on Ruby 3.0, 3.1, 3.2, 3.3
   - Run tests automatically on push/PR
   - Run RuboCop in CI
   - See template in this document below
 
-- [ ] **Create CHANGELOG.md**
+- [x] **Create CHANGELOG.md**
   - Follow [Keep a Changelog](https://keepachangelog.com/) format
   - Document all existing versions (0.1.0, 0.1.1, 0.1.2, 0.1.3)
   - Add Unreleased section for upcoming changes
-  - See template in this document below
 
 - [ ] **Add LICENSE.txt file**
   - Gemspec specifies MIT license but file doesn't exist
@@ -333,6 +332,6 @@ Style/StringLiterals:
 
 Update this section as you complete tasks:
 
-**Completed:** 5/26 tasks (19%)
+**Completed:** 6/26 tasks (23%)
 
 **Last Updated:** 2025-11-20
