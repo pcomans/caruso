@@ -5,8 +5,8 @@ require_relative "lib/caruso/version"
 Gem::Specification.new do |spec|
   spec.name = "caruso"
   spec.version = Caruso::VERSION
-  spec.authors = ["Antigravity"]
-  spec.email = ["antigravity@example.com"]
+  spec.authors = ["Philipp Comans"]
+  spec.email = ["philipp.comans@gmail.com"]
 
   spec.summary = "Sync steering docs from Claude Marketplaces to other agents."
   spec.description = "A tool to fetch Claude Code plugins and adapt them into Cursor Rules or other agent contexts."
