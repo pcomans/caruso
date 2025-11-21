@@ -26,10 +26,9 @@ Based on the Ruby CLI Gem Best Practices evaluation, here are the remaining task
   - Document all existing versions (0.1.0, 0.1.1, 0.1.2, 0.1.3)
   - Add Unreleased section for upcoming changes
 
-- [ ] **Add LICENSE.txt file**
-  - Gemspec specifies MIT license but file doesn't exist
-  - Required for legal open source distribution
-  - Get full MIT license text from https://opensource.org/licenses/MIT
+- [x] **Add LICENSE.txt file**
+  - MIT License with proper copyright attribution
+  - Now matches gemspec declaration
 
 ## 🟡 High Priority
 
@@ -332,6 +331,6 @@ Style/StringLiterals:
 
 Update this section as you complete tasks:
 
-**Completed:** 6/26 tasks (23%)
+**Completed:** 7/26 tasks (27%)
 
 **Last Updated:** 2025-11-20
