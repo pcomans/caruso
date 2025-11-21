@@ -24,6 +24,7 @@ RSpec.describe "Plugin Removal", type: :integration do
 
         # Uninstall it
         run_command("caruso plugin uninstall #{plugin_name}")
+        expect(last_command_started).to be_successfully_executed
 
         manifest = load_manifest
         expect(manifest["plugins"]).not_to have_key(plugin_name)

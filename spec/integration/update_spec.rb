@@ -67,7 +67,7 @@ RSpec.describe "Update Functionality", type: :integration do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
         add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
-        add_marketplace("https://github.com/example/other", "marketplace-2")
+        add_marketplace("https://github.com/anthropics/skills", "marketplace-2")
 
         run_command("caruso marketplace update")
 
@@ -191,6 +191,7 @@ RSpec.describe "Update Functionality", type: :integration do
         plugin_name = match ? match[1] : skip("No plugins available")
 
         run_command("caruso plugin install #{plugin_name}@skills")
+        expect(last_command_started).to be_successfully_executed
         run_command("caruso plugin update #{plugin_name}")
 
         # Should see marketplace update happening

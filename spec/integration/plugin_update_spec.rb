@@ -22,12 +22,13 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       first_install = load_manifest
       first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
 
-      # Advance time to ensure timestamp difference
-      Timecop.travel(Time.now + 2) do
-        # Reinstall the same plugin
-        run_command("caruso plugin install #{plugin_name}@skills")
-        expect(last_command_started).to be_successfully_executed
-      end
+      # Ensure timestamp resolution (ISO8601 has second precision)
+      # Note: Can't use Timecop here because caruso runs in a subprocess
+      sleep 1.1
+
+      # Reinstall the plugin
+      run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       second_install = load_manifest
       second_timestamp = second_install["plugins"][plugin_name]["installed_at"]
