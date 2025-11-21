@@ -32,7 +32,7 @@ module Caruso
       files_to_remove = data["plugins"][name]["files"] || []
       data["plugins"].delete(name)
       save_manifest(data)
-      
+
       files_to_remove
     end
 
@@ -43,7 +43,7 @@ module Caruso
 
     def plugin_installed?(name)
       data = load_manifest
-      data["plugins"] && data["plugins"].key?(name)
+      data["plugins"]&.key?(name)
     end
 
     # Marketplace Management
@@ -57,6 +57,7 @@ module Caruso
     def remove_marketplace(name)
       data = load_manifest
       return unless data["marketplaces"]
+
       data["marketplaces"].delete(name)
       save_manifest(data)
     end
@@ -69,6 +70,7 @@ module Caruso
     def get_marketplace_url(name)
       data = load_manifest
       return nil unless data["marketplaces"]
+
       data["marketplaces"][name]
     end
 

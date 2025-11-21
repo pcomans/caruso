@@ -50,7 +50,7 @@ module Caruso
         if File.basename(@base_dir) == ".claude-plugin"
           @base_dir = File.dirname(@base_dir)
         end
-        
+
         JSON.parse(File.read(@marketplace_uri))
       elsif github_repo?
         # Clone repo and read marketplace.json from it
@@ -58,15 +58,15 @@ module Caruso
         # Try standard locations
         json_path = File.join(repo_path, ".claude-plugin", "marketplace.json")
         json_path = File.join(repo_path, "marketplace.json") unless File.exist?(json_path)
-        
+
         unless File.exist?(json_path)
           raise "Could not find marketplace.json in #{@marketplace_uri}"
         end
-        
+
         # Update marketplace_uri to point to the local file so relative paths work
         @marketplace_uri = json_path
         @base_dir = repo_path # Base dir is the repo root, regardless of where json is
-        
+
         JSON.parse(File.read(json_path))
       else
         response = Faraday.get(@marketplace_uri)
@@ -75,8 +75,8 @@ module Caruso
     end
 
     def github_repo?
-      @marketplace_uri.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+}) || 
-      @marketplace_uri.match?(%r{\A[^/]+/[^/]+\z}) # owner/repo format
+      @marketplace_uri.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+}) ||
+        @marketplace_uri.match?(%r{\A[^/]+/[^/]+\z}) # owner/repo format
     end
 
     def fetch_plugin(plugin)
@@ -88,7 +88,7 @@ module Caruso
     end
 
     def resolve_plugin_path(source)
-      if source.is_a?(Hash) && (source["source"] == "git" || source["source"] == "github")
+      if source.is_a?(Hash) && %w[git github].include?(source["source"])
         clone_git_repo(source)
       elsif local_path? && source.is_a?(String) && source.start_with?(".")
         File.expand_path(source, @base_dir)
@@ -105,19 +105,17 @@ module Caruso
     def clone_git_repo(source_config)
       url = source_config["url"] || source_config["repo"]
       url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
-      
+
       repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
       target_path = File.join(@cache_dir, repo_name)
 
-      if Dir.exist?(target_path)
-        # Use cached repository
-        target_path
-      else
+      unless Dir.exist?(target_path)
+        # Clone the repository if not cached
         Git.clone(url, repo_name, path: @cache_dir)
       end
-      
+
       target_path
-    rescue => e
+    rescue StandardError => e
       puts "Error cloning #{url}: #{e.message}"
       nil
     end
@@ -125,7 +123,7 @@ module Caruso
     def find_steering_files(plugin_path)
       Dir.glob(File.join(plugin_path, "{commands,agents,skills}/**/*.md")).reject do |file|
         basename = File.basename(file).downcase
-        basename == "readme.md" || basename == "license.md"
+        ["readme.md", "license.md"].include?(basename)
       end
     end
 

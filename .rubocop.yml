@@ -1,0 +1,146 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+  Exclude:
+    - 'vendor/**/*'
+    - 'pkg/**/*'
+    - 'tmp/**/*'
+    - 'node_modules/**/*'
+    - '.git/**/*'
+
+# Prefer single quotes for consistency
+Style/StringLiterals:
+  Enabled: true
+  EnforcedStyle: double_quotes
+
+# Documentation is nice but not mandatory for small projects
+Style/Documentation:
+  Enabled: false
+
+# Block length is fine for tests and Rake tasks
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - 'Rakefile'
+    - '*.gemspec'
+
+# Method length - reasonable limit
+Metrics/MethodLength:
+  Max: 25
+  Exclude:
+    - 'spec/**/*'
+    - 'lib/caruso/cli.rb'  # CLI command methods can be longer
+
+# Line length - modern screens can handle more
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
+
+# Allow longer parameter lists for complex methods
+Metrics/ParameterLists:
+  Max: 6
+
+# ABC size - complexity metric
+Metrics/AbcSize:
+  Max: 20
+  Exclude:
+    - 'spec/**/*'
+    - 'lib/caruso/cli.rb'  # Plugin install/list methods are complex by nature
+    - 'lib/caruso/fetcher.rb'  # Marketplace loading handles multiple sources
+
+# Class length is fine for main classes
+Metrics/ClassLength:
+  Max: 150
+  Exclude:
+    - 'spec/**/*'
+
+# Prefer descriptive block parameter names
+Lint/UnusedBlockArgument:
+  AllowUnusedKeywordArguments: true
+
+# Allow rescue in modifier form for simple cases
+Style/RescueModifier:
+  Enabled: false
+
+# Prefer modern hash syntax
+Style/HashSyntax:
+  EnforcedStyle: ruby19
+
+# Frozen string literals - enable for performance
+Style/FrozenStringLiteralComment:
+  Enabled: true
+  EnforcedStyle: always
+
+# Prefer explicit return in some cases for clarity
+Style/RedundantReturn:
+  Enabled: false
+
+# Allow both semantic and compact style for conditionals
+Style/IfUnlessModifier:
+  Enabled: false
+
+# Allow parallel assignment for readability
+Style/ParallelAssignment:
+  Enabled: false
+
+# Perl-style regex backrefs are fine and more concise
+Style/PerlBackrefs:
+  Enabled: false
+
+# Trailing whitespace should be removed
+Layout/TrailingWhitespace:
+  Enabled: true
+
+# Naming conventions
+Naming/MethodName:
+  Enabled: true
+  EnforcedStyle: snake_case
+
+# Prefer raise over fail
+Style/SignalException:
+  EnforcedStyle: only_raise
+
+# Modern Ruby features
+Style/HashEachMethods:
+  Enabled: true
+
+Style/HashTransformKeys:
+  Enabled: true
+
+Style/HashTransformValues:
+  Enabled: true
+
+# Security
+Security/Eval:
+  Enabled: true
+
+Security/Open:
+  Enabled: true
+
+# Gemspec cops
+Gemspec/RequireMFA:
+  Enabled: false  # MFA is good but not mandatory for all projects
+
+Gemspec/DevelopmentDependencies:
+  Enabled: false  # We keep dev dependencies in gemspec for gem distribution
+
+Gemspec/OrderedDependencies:
+  Enabled: true  # Keep dependencies alphabetically sorted
+
+# Allow complex install method in CLI
+Metrics/CyclomaticComplexity:
+  Max: 12
+  Exclude:
+    - 'lib/caruso/cli.rb'
+
+Metrics/PerceivedComplexity:
+  Max: 12
+  Exclude:
+    - 'lib/caruso/cli.rb'
+
+# Duplicate branches are acceptable for error handling with different contexts
+Lint/DuplicateBranch:
+  Enabled: false

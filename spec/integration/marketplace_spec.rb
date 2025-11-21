@@ -73,7 +73,7 @@ RSpec.describe "Marketplace Management", type: :integration do
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Configured Marketplaces:/)
       expect(last_command_started).to have_output(/claude-code/)
-      expect(last_command_started).to have_output(/github\.com\/anthropics\/claude-code/)
+      expect(last_command_started).to have_output(%r{github\.com/anthropics/claude-code})
     end
 
     it "lists multiple marketplaces" do

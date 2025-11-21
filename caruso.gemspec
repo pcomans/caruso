@@ -30,13 +30,13 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
 
   # Runtime dependencies
-  spec.add_dependency "thor", "~> 1.3" # For CLI
   spec.add_dependency "faraday", "~> 2.0" # For HTTP requests
   spec.add_dependency "git", "~> 1.19" # For cloning repos
+  spec.add_dependency "thor", "~> 1.3" # For CLI
 
   # Development dependencies
+  spec.add_development_dependency "aruba", "~> 2.1"
   spec.add_development_dependency "rake", "~> 13.0"
   spec.add_development_dependency "rspec", "~> 3.13"
-  spec.add_development_dependency "aruba", "~> 2.1"
   spec.add_development_dependency "rubocop", "~> 1.60"
 end

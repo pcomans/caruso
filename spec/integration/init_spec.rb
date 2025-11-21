@@ -26,7 +26,7 @@ RSpec.describe "Caruso Initialization", type: :integration do
       run_command("caruso init --ide=cursor")
 
       expect(last_command_started).to have_output(/Project directory:/)
-      expect(last_command_started).to have_output(/Target directory: \.cursor\/rules/)
+      expect(last_command_started).to have_output(%r{Target directory: \.cursor/rules})
       expect(last_command_started).to have_output(/Config saved to:/)
     end
 

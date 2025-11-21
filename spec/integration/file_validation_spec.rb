@@ -33,12 +33,12 @@ RSpec.describe "File Conversion Validation", type: :integration do
         lines = content.lines
 
         expect(lines.first.strip).to eq("---"),
-          "File #{File.basename(file)} should start with ---"
+                                     "File #{File.basename(file)} should start with ---"
 
         # Find closing ---
         closing_index = lines[1..].index { |line| line.strip == "---" }
         expect(closing_index).not_to be_nil,
-          "File #{File.basename(file)} should have closing ---"
+                                     "File #{File.basename(file)} should have closing ---"
       end
     end
 
@@ -47,7 +47,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
         content = File.read(file)
 
         expect(content).to match(/globs:\s*\[\]/),
-          "File #{File.basename(file)} should have 'globs: []' metadata"
+                           "File #{File.basename(file)} should have 'globs: []' metadata"
       end
     end
 
@@ -56,7 +56,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
         lines = File.readlines(file)
 
         expect(lines.length).to be > 5,
-          "File #{File.basename(file)} should have content beyond frontmatter"
+                                "File #{File.basename(file)} should have content beyond frontmatter"
       end
     end
 
@@ -66,7 +66,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
         # Should have markdown headers or content
         expect(content).to match(/#.*\n/),
-          "File #{File.basename(file)} should preserve markdown headers"
+                           "File #{File.basename(file)} should preserve markdown headers"
       end
     end
 
@@ -77,19 +77,19 @@ RSpec.describe "File Conversion Validation", type: :integration do
       tracked_files.each do |tracked_file|
         full_path = File.join(aruba.current_directory, tracked_file)
         expect(File.exist?(full_path)).to be(true),
-          "Tracked file #{tracked_file} should exist"
+                                          "Tracked file #{tracked_file} should exist"
       end
     end
 
     it "no orphaned files (all files are tracked)" do
       manifest = load_manifest
       tracked_basenames = (manifest.dig("plugins", plugin_name, "files") || [])
-        .map { |f| File.basename(f) }
+                          .map { |f| File.basename(f) }
 
       mdc_files.each do |file|
         basename = File.basename(file)
         expect(tracked_basenames).to include(basename),
-          "File #{basename} exists but is not tracked in manifest"
+                                     "File #{basename} exists but is not tracked in manifest"
       end
     end
   end
@@ -109,7 +109,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     it "uses .mdc extension" do
       mdc_files.each do |file|
         expect(File.extname(file)).to eq(".mdc"),
-          "File #{File.basename(file)} should have .mdc extension"
+                                      "File #{File.basename(file)} should have .mdc extension"
       end
     end
 

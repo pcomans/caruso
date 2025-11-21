@@ -77,21 +77,19 @@ module Caruso
           puts "Available marketplaces: #{marketplaces.keys.join(', ')}" unless marketplaces.empty?
           return
         end
-      else
+      elsif marketplaces.empty?
         # Try to find plugin in any configured marketplace
         # Or default to the first one if only one exists
-        if marketplaces.empty?
-          puts "Error: No marketplaces configured. Add one with 'caruso marketplace add <url>'."
-          return
-        elsif marketplaces.size == 1
-          marketplace_name = marketplaces.keys.first
-          marketplace_url = marketplaces.values.first
-          puts "Using default marketplace: #{marketplace_name}"
-        else
-          puts "Error: Multiple marketplaces configured. Please specify which one to use: plugin@marketplace"
-          puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
-          return
-        end
+        puts "Error: No marketplaces configured. Add one with 'caruso marketplace add <url>'."
+        return
+      elsif marketplaces.size == 1
+        marketplace_name = marketplaces.keys.first
+        marketplace_url = marketplaces.values.first
+        puts "Using default marketplace: #{marketplace_name}"
+      else
+        puts "Error: Multiple marketplaces configured. Please specify which one to use: plugin@marketplace"
+        puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
+        return
       end
 
       puts "Installing #{plugin_name} from #{marketplace_name}..."
@@ -166,7 +164,7 @@ module Caruso
             puts "  - #{plugin[:name]} #{status}"
             puts "    #{plugin[:description]}"
           end
-        rescue => e
+        rescue StandardError => e
           puts "  Error fetching marketplace: #{e.message}"
         end
       end
