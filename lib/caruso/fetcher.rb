@@ -8,12 +8,17 @@ require "git"
 
 module Caruso
   class Fetcher
-    attr_reader :marketplace_uri, :cache_dir
+    attr_reader :marketplace_uri
 
-    def initialize(marketplace_uri, cache_dir: "/tmp/caruso_cache")
+    def initialize(marketplace_uri, marketplace_name: nil, ref: nil)
       @marketplace_uri = marketplace_uri
-      @cache_dir = cache_dir
-      FileUtils.mkdir_p(@cache_dir)
+      @marketplace_name = marketplace_name || extract_name_from_url(marketplace_uri)
+      @ref = ref
+      @registry = MarketplaceRegistry.new
+    end
+
+    def cache_dir
+      File.join(Dir.home, ".caruso", "marketplaces", @marketplace_name)
     end
 
     def fetch(plugin_name)
@@ -42,36 +47,20 @@ module Caruso
     end
 
     def update_cache
-      # For git-based marketplaces, update the cached repository
-      if github_repo?
-        url = if @marketplace_uri.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+})
-                @marketplace_uri
-              else
-                "https://github.com/#{@marketplace_uri}.git"
-              end
+      return unless Dir.exist?(cache_dir)
 
-        repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
-        target_path = File.join(@cache_dir, repo_name)
-
-        if Dir.exist?(target_path)
-          # Update existing repository
-          begin
-            git = Git.open(target_path)
-            git.pull
-          rescue StandardError => e
-            raise "Failed to update marketplace cache: #{e.message}"
-          end
-        else
-          # Clone if not cached yet
-          Git.clone(url, repo_name, path: @cache_dir)
+      Dir.chdir(cache_dir) do
+        git = Git.open(".")
+        if @ref
+          git.fetch("origin", @ref)
+          git.checkout(@ref)
         end
-      elsif local_path?
-        # Local paths don't need updating
-        nil
-      else
-        # Remote JSON files don't need caching
-        nil
+        git.pull("origin", "HEAD")
       end
+
+      @registry.update_timestamp(@marketplace_name)
+    rescue => e
+      handle_git_error(e)
     end
 
     private
@@ -152,16 +141,22 @@ module Caruso
       url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
 
       repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
-      target_path = File.join(@cache_dir, repo_name)
+      target_path = cache_dir
 
       unless Dir.exist?(target_path)
-        # Clone the repository if not cached
-        Git.clone(url, repo_name, path: @cache_dir)
+        # Clone the repository
+        FileUtils.mkdir_p(File.dirname(target_path))
+        Git.clone(url, target_path)
+        checkout_ref if @ref
+
+        # Add to registry
+        source_type = source_config["source"] || "git"
+        @registry.add_marketplace(@marketplace_name, url, target_path, ref: @ref, source: source_type)
       end
 
       target_path
     rescue StandardError => e
-      puts "Error cloning #{url}: #{e.message}"
+      handle_git_error(e)
       nil
     end
 
@@ -199,6 +194,30 @@ module Caruso
 
     def local_path?
       !@marketplace_uri.match?(/\Ahttps?:/)
+    end
+
+    def handle_git_error(error)
+      msg = error.message.to_s
+      if msg.include?("Permission denied") ||
+         msg.include?("publickey") ||
+         msg.include?("Could not read from remote")
+        raise Caruso::Error, "SSH authentication failed while accessing marketplace.\n" \
+                             "Please ensure your SSH keys are configured for #{@marketplace_uri}"
+      end
+      raise error
+    end
+
+    def checkout_ref
+      return unless @ref
+
+      Dir.chdir(cache_dir) do
+        git = Git.open(".")
+        git.checkout(@ref)
+      end
+    end
+
+    def extract_name_from_url(url)
+      url.split("/").last.sub(".git", "")
     end
   end
 end
