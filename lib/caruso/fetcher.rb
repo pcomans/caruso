@@ -117,14 +117,26 @@ module Caruso
       plugin_path = resolve_plugin_path(source)
       return [] unless plugin_path && Dir.exist?(plugin_path)
 
-      find_steering_files(plugin_path)
+      # Start with default directories
+      files = find_steering_files(plugin_path)
+
+      # Add custom paths if specified (they supplement defaults)
+      files += find_custom_component_files(plugin_path, plugin["commands"]) if plugin["commands"]
+      files += find_custom_component_files(plugin_path, plugin["agents"]) if plugin["agents"]
+      files += find_custom_component_files(plugin_path, plugin["skills"]) if plugin["skills"]
+
+      files.uniq
     end
 
     def resolve_plugin_path(source)
       if source.is_a?(Hash) && %w[git github].include?(source["source"])
         clone_git_repo(source)
-      elsif local_path? && source.is_a?(String) && source.start_with?(".")
-        File.expand_path(source, @base_dir)
+      elsif local_path? && source.is_a?(String) && (source.start_with?(".") || source.start_with?("/"))
+        if source.start_with?("/")
+          source
+        else
+          File.expand_path(source, @base_dir)
+        end
       elsif source.is_a?(String) && source.match?(/\Ahttps?:/)
         # Assume it's a git URL if it ends in .git or we treat it as such
         clone_git_repo("url" => source)
@@ -158,6 +170,31 @@ module Caruso
         basename = File.basename(file).downcase
         ["readme.md", "license.md"].include?(basename)
       end
+    end
+
+    def find_custom_component_files(plugin_path, paths)
+      # Handle both string and array formats
+      paths = [paths] if paths.is_a?(String)
+      return [] unless paths.is_a?(Array)
+
+      files = []
+      paths.each do |path|
+        # Resolve the path relative to plugin_path
+        full_path = File.expand_path(path, plugin_path)
+
+        # Handle both files and directories
+        if File.file?(full_path) && full_path.end_with?(".md")
+          basename = File.basename(full_path).downcase
+          files << full_path unless ["readme.md", "license.md"].include?(basename)
+        elsif Dir.exist?(full_path)
+          # Find all .md files in this directory
+          Dir.glob(File.join(full_path, "**/*.md")).each do |file|
+            basename = File.basename(file).downcase
+            files << file unless ["readme.md", "license.md"].include?(basename)
+          end
+        end
+      end
+      files
     end
 
     def local_path?

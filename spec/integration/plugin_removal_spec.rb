@@ -19,6 +19,7 @@ RSpec.describe "Plugin Removal", type: :integration do
         plugin_name = match ? match[1] : skip("No plugins available")
 
         run_command("caruso plugin install #{plugin_name}@skills")
+        expect(last_command_started).to be_successfully_executed
         expect(load_manifest["plugins"]).to have_key(plugin_name)
 
         # Uninstall it

@@ -74,6 +74,7 @@ RSpec.describe "Plugin Management", type: :integration do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       manifest = load_manifest
       expect(manifest["plugins"]).to have_key(plugin_name)
@@ -86,6 +87,7 @@ RSpec.describe "Plugin Management", type: :integration do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       expect(mdc_files).not_to be_empty
     end
@@ -94,8 +96,9 @@ RSpec.describe "Plugin Management", type: :integration do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
       run_command("caruso plugin install #{plugin_name}@skills")
-      run_command("caruso plugin list")
+      expect(last_command_started).to be_successfully_executed
 
+      run_command("caruso plugin list")
       expect(last_command_started).to have_output(/#{plugin_name}.*\[Installed\]/)
     end
 
@@ -146,6 +149,7 @@ RSpec.describe "Plugin Management", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       # Then uninstall it
       run_command("caruso plugin uninstall #{plugin_name}")
@@ -168,8 +172,14 @@ RSpec.describe "Plugin Management", type: :integration do
 
   describe "error handling" do
     it "handles network errors gracefully during plugin operations" do
+      # Start fresh without any marketplaces
+      run_command("rm -rf .cursor .caruso.json")
+      run_command("caruso init --ide=cursor")
+      expect(last_command_started).to be_successfully_executed
+
       # Add a marketplace that will fail when fetched
-      run_command("caruso marketplace add https://invalid-url-12345.example.com/marketplace.json")
+      run_command("caruso marketplace add https://invalid-url-12345.example.com/marketplace.json invalid-marketplace")
+      expect(last_command_started).to be_successfully_executed
 
       # Trying to list plugins should handle the network error gracefully
       run_command("caruso plugin list")

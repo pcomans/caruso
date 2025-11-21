@@ -166,12 +166,14 @@ RSpec.describe "Update Functionality", type: :integration do
 
         # Install plugin
         run_command("caruso plugin install #{plugin_name}@skills")
+        expect(last_command_started).to be_successfully_executed
         first_install = load_manifest
         first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
 
         # Update plugin
         Timecop.travel(Time.now + 2) do
           run_command("caruso plugin update #{plugin_name}")
+          expect(last_command_started).to be_successfully_executed
         end
 
         second_install = load_manifest
@@ -262,7 +264,9 @@ RSpec.describe "Update Functionality", type: :integration do
         skip("Need at least 2 plugins") if plugins.size < 2
 
         run_command("caruso plugin install #{plugins[0]}@skills")
+        expect(last_command_started).to be_successfully_executed
         run_command("caruso plugin install #{plugins[1]}@skills")
+        expect(last_command_started).to be_successfully_executed
 
         # Update all
         run_command("caruso plugin update --all")

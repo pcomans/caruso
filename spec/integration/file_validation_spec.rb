@@ -21,6 +21,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
     end
 
     it "creates .mdc files" do

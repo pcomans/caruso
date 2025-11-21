@@ -18,6 +18,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
       # Install plugin first time
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       first_install = load_manifest
       first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
 
@@ -25,6 +26,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       Timecop.travel(Time.now + 2) do
         # Reinstall the same plugin
         run_command("caruso plugin install #{plugin_name}@skills")
+        expect(last_command_started).to be_successfully_executed
       end
 
       second_install = load_manifest
@@ -44,10 +46,12 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
       # Install plugin
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       first_files = load_manifest["plugins"][plugin_name]["files"]
 
       # Reinstall
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       second_files = load_manifest["plugins"][plugin_name]["files"]
 
       # Files list should be updated (even if identical in this case)
@@ -90,6 +94,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       manifest = load_manifest
 
       # Check if version info is tracked (implementation may vary)
@@ -234,14 +239,17 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
       # Install
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       expect(load_manifest["plugins"]).to have_key(plugin_name)
 
       # Uninstall
       run_command("caruso plugin uninstall #{plugin_name}")
+      expect(last_command_started).to be_successfully_executed
       expect(load_manifest["plugins"]).not_to have_key(plugin_name)
 
       # Reinstall
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
       expect(load_manifest["plugins"]).to have_key(plugin_name)
     end
 
