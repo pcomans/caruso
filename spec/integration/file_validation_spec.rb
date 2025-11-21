@@ -150,6 +150,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       manifest = load_manifest
       expect(manifest).to have_key("plugins")
@@ -164,6 +165,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       plugin_name = match ? match[1] : skip("No plugins available")
 
       run_command("caruso plugin install #{plugin_name}@skills")
+      expect(last_command_started).to be_successfully_executed
 
       manifest = load_manifest
       plugin_data = manifest["plugins"][plugin_name]
