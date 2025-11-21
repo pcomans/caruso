@@ -74,6 +74,7 @@ module Caruso
         marketplace_url = manager.get_marketplace_url(marketplace_name)
         unless marketplace_url
           puts "Error: Marketplace '#{marketplace_name}' not found. Add it with 'caruso marketplace add <url>'."
+          puts "Available marketplaces: #{marketplaces.keys.join(', ')}" unless marketplaces.empty?
           return
         end
       else
@@ -95,8 +96,14 @@ module Caruso
 
       puts "Installing #{plugin_name} from #{marketplace_name}..."
 
-      fetcher = Caruso::Fetcher.new(marketplace_url)
-      files = fetcher.fetch(plugin_name)
+      begin
+        fetcher = Caruso::Fetcher.new(marketplace_url)
+        files = fetcher.fetch(plugin_name)
+      rescue Caruso::PluginNotFoundError => e
+        puts "Error: #{e.message}"
+        puts "Available plugins: #{e.available_plugins.join(', ')}" unless e.available_plugins.empty?
+        return
+      end
 
       if files.empty?
         puts "No steering files found for #{plugin_name}."

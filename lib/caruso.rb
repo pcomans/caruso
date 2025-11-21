@@ -9,4 +9,13 @@ require_relative "caruso/cli"
 
 module Caruso
   class Error < StandardError; end
+  
+  class PluginNotFoundError < Error
+    attr_reader :available_plugins
+    
+    def initialize(message, available_plugins = [])
+      super(message)
+      @available_plugins = available_plugins
+    end
+  end
 end

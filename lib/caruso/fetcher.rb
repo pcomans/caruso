@@ -21,7 +21,10 @@ module Caruso
       plugins = marketplace_data["plugins"] || []
 
       plugin = plugins.find { |p| p["name"] == plugin_name }
-      raise "Plugin '#{plugin_name}' not found in marketplace" unless plugin
+      unless plugin
+        available = plugins.map { |p| p["name"] }
+        raise PluginNotFoundError.new("Plugin '#{plugin_name}' not found in marketplace", available)
+      end
 
       fetch_plugin(plugin)
     end
