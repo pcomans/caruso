@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-11-22
+
+### Added
+- **MarketplaceRegistry**: New persistent registry at `~/.caruso/known_marketplaces.json` tracking marketplace metadata
+- `marketplace info NAME` command to view detailed marketplace information (source, URL, location, last updated, ref, cache status)
+- Support for Git ref/branch pinning via `--ref` option on `marketplace add` command
+- Marketplace source type tracking (git, github, url, local, directory)
+- SSH authentication error detection with helpful error messages
+- Registry schema validation with corruption handling and automatic backups
+- `CARUSO_TESTING_SKIP_CLONE` environment variable for testing without network access
+
+### Changed
+- **BREAKING**: Marketplace cache moved from `/tmp/caruso_cache/` to `~/.caruso/marketplaces/<marketplace-name>/`
+- **BREAKING**: No backwards compatibility with previous cache location (clean break)
+- Marketplace metadata now persists across system reboots in registry
+- Fetcher tracks marketplace updates with timestamps
+- Comprehensive test suite with 22 new MarketplaceRegistry unit tests (all passing)
+
+### Fixed
+- Made `clone_git_repo` public for CLI access
+- Integration tests now skip Git cloning in test mode for reliable offline testing
+- All 158 test examples passing (0 failures)
+
+### Implementation Details
+This release adopts Claude Code's proven architecture patterns:
+- Persistent cache in `~/.caruso/` following XDG-style conventions
+- Metadata registry for tracking marketplace state
+- Git ref support for version pinning
+- Graceful error handling for network and authentication issues
+
 ## [0.1.4] - 2025-11-21
 
 ### Added

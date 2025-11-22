@@ -6,6 +6,7 @@ require_relative "../caruso"
 module Caruso
   class Marketplace < Thor
     desc "add URL [NAME]", "Add a marketplace"
+    method_option :ref, type: :string, desc: "Git branch or tag to checkout"
     def add(url, name = nil)
       config_manager = load_config
       target_dir = config_manager.full_target_path
@@ -13,9 +14,20 @@ module Caruso
       # Extract name from URL if not provided
       name ||= url.split("/").last.sub(".git", "")
 
+      # Initialize fetcher and clone repository
+      fetcher = Caruso::Fetcher.new(url, marketplace_name: name, ref: options[:ref])
+
+      # For Git repos, clone/update the cache (skip in test mode to allow fake URLs)
+      if (url.match?(/\Ahttps?:/) || url.match?(%r{[^/]+/[^/]+})) && !ENV["CARUSO_TESTING_SKIP_CLONE"]
+        fetcher.clone_git_repo({"url" => url, "source" => "git"})
+      end
+
       manager = Caruso::ManifestManager.new(target_dir)
       manager.add_marketplace(name, url)
+
       puts "Added marketplace '#{name}' from #{url}"
+      puts "  Cached at: #{fetcher.cache_dir}"
+      puts "  Ref: #{options[:ref]}" if options[:ref]
     end
 
     desc "list", "List configured marketplaces"
@@ -41,9 +53,52 @@ module Caruso
       config_manager = load_config
       target_dir = config_manager.full_target_path
 
+      # Remove from manifest
       manager = Caruso::ManifestManager.new(target_dir)
       manager.remove_marketplace(name)
+
+      # Remove from registry
+      registry = Caruso::MarketplaceRegistry.new
+      marketplace = registry.get_marketplace(name)
+      if marketplace
+        cache_dir = marketplace["install_location"]
+        registry.remove_marketplace(name)
+
+        # Inform about cache directory
+        if Dir.exist?(cache_dir)
+          puts "Cache directory still exists at: #{cache_dir}"
+          puts "Run 'rm -rf #{cache_dir}' to delete it if desired."
+        end
+      end
+
       puts "Removed marketplace '#{name}'"
+    end
+
+    desc "info NAME", "Show marketplace information"
+    def info(name)
+      registry = Caruso::MarketplaceRegistry.new
+      marketplace = registry.get_marketplace(name)
+
+      unless marketplace
+        puts "Error: Marketplace '#{name}' not found in registry."
+        available = registry.list_marketplaces.keys
+        puts "Available marketplaces: #{available.join(', ')}" unless available.empty?
+        return
+      end
+
+      puts "Marketplace: #{name}"
+      puts "  Source: #{marketplace['source']}" if marketplace['source']
+      puts "  URL: #{marketplace['url']}"
+      puts "  Location: #{marketplace['install_location']}"
+      puts "  Last Updated: #{marketplace['last_updated']}"
+      puts "  Ref: #{marketplace['ref']}" if marketplace['ref']
+
+      # Check if directory actually exists
+      if Dir.exist?(marketplace['install_location'])
+        puts "  Status: ✓ Cached locally"
+      else
+        puts "  Status: ✗ Cache directory missing"
+      end
     end
 
     desc "update [NAME]", "Update marketplace metadata (updates all if no name given)"
@@ -70,7 +125,7 @@ module Caruso
 
         puts "Updating marketplace '#{name}'..."
         begin
-          fetcher = Caruso::Fetcher.new(marketplace_url)
+          fetcher = Caruso::Fetcher.new(marketplace_url, marketplace_name: name)
           fetcher.update_cache
           puts "Updated marketplace '#{name}'"
         rescue StandardError => e
@@ -90,7 +145,7 @@ module Caruso
         marketplaces.each do |marketplace_name, marketplace_url|
           begin
             puts "  Updating #{marketplace_name}..."
-            fetcher = Caruso::Fetcher.new(marketplace_url)
+            fetcher = Caruso::Fetcher.new(marketplace_url, marketplace_name: marketplace_name)
             fetcher.update_cache
             success_count += 1
           rescue StandardError => e
@@ -152,7 +207,7 @@ module Caruso
       puts "Installing #{plugin_name} from #{marketplace_name}..."
 
       begin
-        fetcher = Caruso::Fetcher.new(marketplace_url)
+        fetcher = Caruso::Fetcher.new(marketplace_url, marketplace_name: marketplace_name)
         files = fetcher.fetch(plugin_name)
       rescue Caruso::PluginNotFoundError => e
         puts "Error: #{e.message}"
@@ -213,7 +268,7 @@ module Caruso
       marketplaces.each do |name, url|
         puts "\nMarketplace: #{name} (#{url})"
         begin
-          fetcher = Caruso::Fetcher.new(url)
+          fetcher = Caruso::Fetcher.new(url, marketplace_name: name)
           available = fetcher.list_available_plugins
 
           available.each do |plugin|
@@ -301,12 +356,15 @@ module Caruso
       puts "Checking for updates..."
       outdated_plugins = []
 
+      marketplaces = manager.list_marketplaces
+
       installed_plugins.each do |name, plugin_data|
         marketplace_url = plugin_data["marketplace"]
         next unless marketplace_url
 
         begin
-          fetcher = Caruso::Fetcher.new(marketplace_url)
+          marketplace_name = marketplaces.key(marketplace_url)
+          fetcher = Caruso::Fetcher.new(marketplace_url, marketplace_name: marketplace_name)
           # For now, we'll just report that updates might be available
           # Full version comparison would require version tracking in marketplace.json
           outdated_plugins << {
@@ -339,8 +397,12 @@ module Caruso
         raise "No marketplace information found for #{plugin_name}"
       end
 
+      # Get marketplace name from manifest
+      marketplaces = manager.list_marketplaces
+      marketplace_name = marketplaces.key(marketplace_url)
+
       # Update marketplace cache first
-      fetcher = Caruso::Fetcher.new(marketplace_url)
+      fetcher = Caruso::Fetcher.new(marketplace_url, marketplace_name: marketplace_name)
       fetcher.update_cache
 
       # Fetch latest plugin files

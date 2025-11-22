@@ -63,6 +63,30 @@ module Caruso
       handle_git_error(e)
     end
 
+    def clone_git_repo(source_config)
+      url = source_config["url"] || source_config["repo"]
+      url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
+
+      repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
+      target_path = cache_dir
+
+      unless Dir.exist?(target_path)
+        # Clone the repository
+        FileUtils.mkdir_p(File.dirname(target_path))
+        Git.clone(url, target_path)
+        checkout_ref if @ref
+
+        # Add to registry
+        source_type = source_config["source"] || "git"
+        @registry.add_marketplace(@marketplace_name, url, target_path, ref: @ref, source: source_type)
+      end
+
+      target_path
+    rescue StandardError => e
+      handle_git_error(e)
+      nil
+    end
+
     private
 
     def load_marketplace
@@ -134,30 +158,6 @@ module Caruso
         puts "Warning: Could not resolve source for plugin: #{source}"
         nil
       end
-    end
-
-    def clone_git_repo(source_config)
-      url = source_config["url"] || source_config["repo"]
-      url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
-
-      repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
-      target_path = cache_dir
-
-      unless Dir.exist?(target_path)
-        # Clone the repository
-        FileUtils.mkdir_p(File.dirname(target_path))
-        Git.clone(url, target_path)
-        checkout_ref if @ref
-
-        # Add to registry
-        source_type = source_config["source"] || "git"
-        @registry.add_marketplace(@marketplace_name, url, target_path, ref: @ref, source: source_type)
-      end
-
-      target_path
-    rescue StandardError => e
-      handle_git_error(e)
-      nil
     end
 
     def find_steering_files(plugin_path)

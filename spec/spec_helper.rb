@@ -25,11 +25,25 @@ RSpec.configure do |config|
 
   # Clear caruso cache once at start of live test suite (much faster than per-test)
   config.before(:suite) do
-    FileUtils.rm_rf("/tmp/caruso_cache") if ENV["RUN_LIVE_TESTS"] && File.directory?("/tmp/caruso_cache")
+    caruso_dir = File.join(Dir.home, ".caruso")
+    if ENV["RUN_LIVE_TESTS"] && File.directory?(caruso_dir)
+      # Only clear marketplaces subdirectory, preserve other .caruso data
+      marketplaces_dir = File.join(caruso_dir, "marketplaces")
+      FileUtils.rm_rf(marketplaces_dir) if File.directory?(marketplaces_dir)
+
+      # Clear registry for fresh testing
+      registry_file = File.join(caruso_dir, "known_marketplaces.json")
+      FileUtils.rm_f(registry_file) if File.exist?(registry_file)
+    end
   end
 
   # Include Aruba for integration tests
   config.include Aruba::Api, type: :integration
+
+  # Skip Git cloning in integration tests (allows fake URLs for testing manifest logic)
+  config.before(:each, type: :integration) do
+    set_environment_variable("CARUSO_TESTING_SKIP_CLONE", "true")
+  end
 
   # Helper methods available in all specs
   config.include(Module.new do

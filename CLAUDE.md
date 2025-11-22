@@ -58,7 +58,7 @@ bundle exec rspec spec/integration/plugin_spec.rb
 bundle exec rspec spec/integration/plugin_spec.rb:42
 ```
 
-**Important:** Live tests (tagged with `:live`) interact with real marketplaces (anthropics/skills) and require network access. They can be slow (~7 minutes). Marketplace cache is stored in `/tmp/caruso_cache/`.
+**Important:** Live tests (tagged with `:live`) interact with real marketplaces (anthropics/skills) and require network access. They can be slow (~7 minutes). Marketplace cache is stored in `~/.caruso/marketplaces/`. Integration tests set `CARUSO_TESTING_SKIP_CLONE=true` to skip Git cloning for fast offline testing.
 
 ### Linting
 ```bash
@@ -108,6 +108,22 @@ Manages `caruso.json` in target IDE directory (e.g., `.cursor/rules/caruso.json`
 
 This manifest tracks what's installed and where it came from. Used for uninstall, update, and status tracking.
 
+#### MarketplaceRegistry (`lib/caruso/marketplace_registry.rb`)
+Manages persistent marketplace metadata registry at `~/.caruso/known_marketplaces.json`. Contains:
+- `source`: Marketplace type (git, github, url, local, directory)
+- `url`: Original marketplace URL
+- `install_location`: Local cache path (e.g., `~/.caruso/marketplaces/skills/`)
+- `last_updated`: ISO8601 timestamp of last update
+- `ref`: Optional Git ref/branch/tag for pinning
+
+**Key features:**
+- **Schema validation**: Validates required fields and timestamp format on load
+- **Corruption handling**: Backs up corrupted registry to `.corrupted.<timestamp>` and continues with empty registry
+- **Timestamp tracking**: Updates `last_updated` when marketplace cache is refreshed
+- **Source type tracking**: Enables future support for multiple marketplace sources
+
+This registry enables persistent tracking of marketplace state across reboots, unlike the previous `/tmp` approach.
+
 #### Fetcher (`lib/caruso/fetcher.rb`)
 Resolves and fetches plugins from marketplaces. Supports:
 - GitHub repos: `https://github.com/owner/repo`
@@ -115,12 +131,15 @@ Resolves and fetches plugins from marketplaces. Supports:
 - Local paths: `./path/to/marketplace` or `./path/to/marketplace.json`
 
 **Key behavior:**
-- Clones Git repos to `/tmp/caruso_cache/<repo-name>/` (persistent between runs)
+- Clones Git repos to `~/.caruso/marketplaces/<marketplace-name>/` (persistent across reboots)
+- Registers marketplace metadata in `~/.caruso/known_marketplaces.json` (via MarketplaceRegistry)
+- Supports Git ref/branch pinning for version control
 - Reads `marketplace.json` to find available plugins
 - Supports custom component paths: plugins can specify `commands`, `agents`, `skills` arrays pointing to non-standard locations
 - Scans standard directories: `{commands,agents,skills}/**/*.md`
 - Excludes README.md and LICENSE.md files
 - **Custom paths supplement (not replace) default directories** - this is critical
+- Detects SSH authentication errors and provides helpful error messages
 
 **marketplace.json structure:**
 ```json
@@ -157,13 +176,18 @@ Returns array of created filenames (not full paths) for manifest tracking.
 #### CLI (`lib/caruso/cli.rb`)
 Thor-based CLI with nested commands:
 - `caruso init [PATH] --ide=cursor`
-- `caruso marketplace add|list|remove|update`
+- `caruso marketplace add URL [NAME] [--ref=BRANCH]` - Add marketplace with optional Git ref pinning
+- `caruso marketplace list` - List configured marketplaces
+- `caruso marketplace remove NAME` - Remove marketplace from manifest and registry
+- `caruso marketplace update [NAME]` - Update marketplace cache (all if no name given)
+- `caruso marketplace info NAME` - Show detailed marketplace information from registry
 - `caruso plugin install|uninstall|list|update|outdated`
 
 **Important patterns:**
 - All commands except `init` require existing `.caruso.json` (enforced by `load_config` helper)
 - Plugin install format: `plugin@marketplace` or just `plugin` (if only one marketplace configured)
 - Update commands refresh marketplace cache (git pull) before fetching latest plugin files
+- Marketplace add eagerly clones repos unless `CARUSO_TESTING_SKIP_CLONE` env var is set (used in tests)
 - Errors use descriptive messages with suggestions (e.g., "use 'caruso marketplace add <url>'")
 
 ### Data Flow Example
@@ -172,14 +196,15 @@ User runs: `caruso plugin install document-skills@skills`
 
 1. **CLI** parses command, loads config from `.caruso.json`
 2. **ManifestManager** looks up marketplace "skills" URL from `.cursor/rules/caruso.json`
-3. **Fetcher** clones/updates marketplace repo to `/tmp/caruso_cache/skills/`
-4. **Fetcher** reads `marketplace.json`, finds document-skills plugin
-5. **Fetcher** scans standard directories + custom paths from `skills: [...]` array
-6. **Fetcher** returns list of `.md` file paths
-7. **Adapter** converts each file: adds frontmatter, renames to `.mdc`, writes to `.cursor/rules/`
-8. **Adapter** returns created filenames
-9. **ManifestManager** records plugin in manifest with file list and marketplace URL
-10. **CLI** prints success message
+3. **Fetcher** clones/updates marketplace repo to `~/.caruso/marketplaces/skills/`
+4. **Fetcher** registers/updates marketplace metadata in MarketplaceRegistry
+5. **Fetcher** reads `marketplace.json`, finds document-skills plugin
+6. **Fetcher** scans standard directories + custom paths from `skills: [...]` array
+7. **Fetcher** returns list of `.md` file paths
+8. **Adapter** converts each file: adds frontmatter, renames to `.mdc`, writes to `.cursor/rules/`
+9. **Adapter** returns created filenames
+10. **ManifestManager** records plugin in manifest with file list and marketplace URL
+11. **CLI** prints success message
 
 ### Testing Architecture
 

@@ -5,12 +5,17 @@ require "tmpdir"
 require "fileutils"
 
 RSpec.describe Caruso::Fetcher do
-  let(:cache_dir) { Dir.mktmpdir }
+  let(:home_dir) { Dir.mktmpdir }
   let(:marketplace_dir) { Dir.mktmpdir }
   let(:marketplace_json) { File.join(marketplace_dir, ".claude-plugin", "marketplace.json") }
+  let(:marketplace_name) { "test-marketplace" }
+
+  before do
+    allow(Dir).to receive(:home).and_return(home_dir)
+  end
 
   after do
-    FileUtils.rm_rf(cache_dir)
+    FileUtils.rm_rf(home_dir)
     FileUtils.rm_rf(marketplace_dir)
   end
 
@@ -46,7 +51,7 @@ RSpec.describe Caruso::Fetcher do
         "source" => "./standard-plugin"
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("standard-plugin")
 
       expect(files.length).to eq(3)
@@ -66,7 +71,7 @@ RSpec.describe Caruso::Fetcher do
         "source" => "./standard-plugin"
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("standard-plugin")
 
       expect(files.length).to eq(1)
@@ -89,7 +94,7 @@ RSpec.describe Caruso::Fetcher do
         "commands" => ["./custom/special.md", "./experimental/"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-commands")
 
       expect(files.length).to eq(3)
@@ -109,7 +114,7 @@ RSpec.describe Caruso::Fetcher do
         "commands" => "./custom/special.md"
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-commands")
 
       expect(files.length).to eq(2)
@@ -132,7 +137,7 @@ RSpec.describe Caruso::Fetcher do
         "agents" => ["./custom/agents/", "./experimental/agents/"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-agents")
 
       expect(files.length).to eq(3)
@@ -155,7 +160,7 @@ RSpec.describe Caruso::Fetcher do
         "skills" => ["./document-skills/xlsx", "./document-skills/docx"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-skills")
 
       expect(files.length).to eq(3)
@@ -185,7 +190,7 @@ RSpec.describe Caruso::Fetcher do
         "skills" => ["./custom/skills/"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("all-custom")
 
       expect(files.length).to eq(6)
@@ -205,7 +210,7 @@ RSpec.describe Caruso::Fetcher do
         "commands" => ["./commands/deploy.md"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("duplicate-plugin")
 
       # Should only return the file once, even though it's in both default and custom paths
@@ -226,7 +231,7 @@ RSpec.describe Caruso::Fetcher do
         "commands" => ["./nonexistent/dir/"]
       }])
 
-      fetcher = described_class.new(marketplace_json, cache_dir: cache_dir)
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("missing-paths")
 
       # Should still find the standard command
