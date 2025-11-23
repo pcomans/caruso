@@ -78,9 +78,17 @@ RSpec.configure do |config|
       expect(last_command_started).to be_successfully_executed
     end
 
-    def add_marketplace(url, name = nil)
-      cmd = name ? "marketplace add #{url} #{name}" : "marketplace add #{url}"
-      run_command("caruso #{cmd}")
+    def test_marketplace_path
+      File.expand_path("fixtures/test-marketplace", __dir__)
+    end
+
+    def other_marketplace_path
+      File.expand_path("fixtures/other-marketplace", __dir__)
+    end
+
+    def add_marketplace(url = nil)
+      url ||= test_marketplace_path
+      run_command("caruso marketplace add #{url}")
       expect(last_command_started).to be_successfully_executed
     end
   end)

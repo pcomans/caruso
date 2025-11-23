@@ -5,13 +5,10 @@ require_relative "../caruso"
 
 module Caruso
   class Marketplace < Thor
-    desc "add URL [NAME]", "Add a marketplace"
+    desc "add URL", "Add a marketplace"
     method_option :ref, type: :string, desc: "Git branch or tag to checkout"
-    def add(url, name = nil)
+    def add(url)
       config_manager = load_config
-
-      # Extract name from URL if not provided
-      name ||= url.split("/").last.sub(".git", "")
 
       # Determine source type
       source = "git"
@@ -19,17 +16,20 @@ module Caruso
         source = "github"
       end
 
-      # Initialize fetcher and clone repository
-      fetcher = Caruso::Fetcher.new(url, marketplace_name: name, ref: options[:ref])
+      # Initialize fetcher and clone repository (cache dir is URL-based)
+      fetcher = Caruso::Fetcher.new(url, ref: options[:ref])
 
       # For Git repos, clone/update the cache (skip in test mode to allow fake URLs)
       if (source == "github" || url.match?(/\Ahttps?:/) || url.match?(%r{[^/]+/[^/]+})) && !ENV["CARUSO_TESTING_SKIP_CLONE"]
         fetcher.clone_git_repo({"url" => url, "source" => source})
       end
 
-      config_manager.add_marketplace(name, url, source: source, ref: options[:ref])
+      # Read marketplace name from marketplace.json
+      marketplace_name = fetcher.extract_marketplace_name
 
-      puts "Added marketplace '#{name}' from #{url}"
+      config_manager.add_marketplace(marketplace_name, url, source: source, ref: options[:ref])
+
+      puts "Added marketplace '#{marketplace_name}' from #{url}"
       puts "  Cached at: #{fetcher.cache_dir}"
       puts "  Ref: #{options[:ref]}" if options[:ref]
     end

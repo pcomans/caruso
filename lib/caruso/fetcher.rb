@@ -12,13 +12,15 @@ module Caruso
 
     def initialize(marketplace_uri, marketplace_name: nil, ref: nil)
       @marketplace_uri = marketplace_uri
-      @marketplace_name = marketplace_name || extract_name_from_url(marketplace_uri)
+      @marketplace_name = marketplace_name
       @ref = ref
       @registry = MarketplaceRegistry.new
     end
 
     def cache_dir
-      File.join(Dir.home, ".caruso", "marketplaces", @marketplace_name)
+      # Cache directory based on URL for stability (name comes from marketplace.json)
+      url_based_name = extract_name_from_url(@marketplace_uri)
+      File.join(Dir.home, ".caruso", "marketplaces", url_based_name)
     end
 
     def fetch(plugin_name)
@@ -87,10 +89,33 @@ module Caruso
       nil
     end
 
+    def extract_marketplace_name
+      marketplace_data = load_marketplace
+      name = marketplace_data["name"]
+
+      unless name
+        raise Caruso::Error, "Invalid marketplace: marketplace.json missing required 'name' field"
+      end
+
+      name
+    end
+
     private
 
     def load_marketplace
       if local_path?
+        # If marketplace_uri is a directory, find marketplace.json in it
+        if File.directory?(@marketplace_uri)
+          json_path = File.join(@marketplace_uri, ".claude-plugin", "marketplace.json")
+          json_path = File.join(@marketplace_uri, "marketplace.json") unless File.exist?(json_path)
+
+          unless File.exist?(json_path)
+            raise Caruso::Error, "Could not find marketplace.json in #{@marketplace_uri}"
+          end
+
+          @marketplace_uri = json_path
+        end
+
         @base_dir = File.dirname(@marketplace_uri)
         # Heuristic: if we are in .claude-plugin, the real root is one level up
         if File.basename(@base_dir) == ".claude-plugin"

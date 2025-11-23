@@ -1,0 +1,15 @@
+{
+  "name": "other-marketplace",
+  "owner": {
+    "name": "Test Team",
+    "email": "test@example.com"
+  },
+  "plugins": [
+    {
+      "name": "test-plugin",
+      "source": "./plugins/test-plugin",
+      "description": "A test plugin from other marketplace",
+      "version": "2.0.0"
+    }
+  ]
+}

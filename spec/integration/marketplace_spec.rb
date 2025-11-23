@@ -3,57 +3,40 @@
 require "spec_helper"
 
 RSpec.describe "Marketplace Management", type: :integration do
+  let(:test_marketplace_path) { File.expand_path("../fixtures/test-marketplace", __dir__) }
+
   before do
     init_caruso
   end
 
   describe "caruso marketplace add" do
-    it "adds a marketplace from GitHub URL" do
-      run_command("caruso marketplace add https://github.com/anthropics/skills")
+    it "adds a marketplace from local path" do
+      run_command("caruso marketplace add #{test_marketplace_path}")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Added marketplace/)
-      expect(last_command_started).to have_output(/skills/)
+      expect(last_command_started).to have_output(/test-skills/)
     end
 
     it "creates config file" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace(test_marketplace_path)
 
       expect(File.exist?(config_file)).to be true
     end
 
-    it "registers marketplace in config" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+    it "registers marketplace in config with name from marketplace.json" do
+      add_marketplace(test_marketplace_path)
 
       config = load_project_config
-      expect(config["marketplaces"]).to have_key("skills")
-      expect(config["marketplaces"]["skills"]["url"]).to include("skills")
+      expect(config["marketplaces"]).to have_key("test-skills")
+      expect(config["marketplaces"]["test-skills"]["url"]).to eq(test_marketplace_path)
     end
 
-    it "adds marketplace with custom name" do
-      run_command("caruso marketplace add https://github.com/anthropics/skills custom-name")
-
-      expect(last_command_started).to be_successfully_executed
-      expect(last_command_started).to have_output(/custom-name/)
+    it "extracts name from marketplace.json" do
+      add_marketplace(test_marketplace_path)
 
       config = load_project_config
-      expect(config["marketplaces"]).to have_key("custom-name")
-    end
-
-    it "extracts name from URL if not provided" do
-      add_marketplace("https://github.com/anthropics/skills")
-
-      config = load_project_config
-      expect(config["marketplaces"]).to have_key("skills")
-    end
-
-    it "handles .git extension in URL" do
-      run_command("caruso marketplace add https://github.com/anthropics/skills.git")
-
-      expect(last_command_started).to be_successfully_executed
-
-      config = load_project_config
-      expect(config["marketplaces"]).to have_key("skills")
+      expect(config["marketplaces"]).to have_key("test-skills")
     end
   end
 
@@ -66,38 +49,28 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "lists configured marketplaces" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace(test_marketplace_path)
 
       run_command("caruso marketplace list")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Configured Marketplaces:/)
-      expect(last_command_started).to have_output(/skills/)
-      expect(last_command_started).to have_output(%r{github\.com/anthropics/skills})
-    end
-
-    it "lists multiple marketplaces" do
-      add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
-      add_marketplace("https://github.com/anthropics/skills", "marketplace-2")
-
-      run_command("caruso marketplace list")
-
-      expect(last_command_started).to have_output(/marketplace-1/)
-      expect(last_command_started).to have_output(/marketplace-2/)
+      expect(last_command_started).to have_output(/test-skills/)
+      expect(last_command_started).to have_output(/test-marketplace/)
     end
   end
 
   describe "caruso marketplace remove" do
     it "removes a marketplace" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace(test_marketplace_path)
 
-      run_command("caruso marketplace remove skills")
+      run_command("caruso marketplace remove test-skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Removed marketplace/)
 
       config = load_project_config
-      expect(config["marketplaces"]).not_to have_key("skills")
+      expect(config["marketplaces"]).not_to have_key("test-skills")
     end
 
     it "handles removing non-existent marketplace gracefully" do
@@ -109,7 +82,7 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "marketplace config structure" do
     it "creates proper JSON structure" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace(test_marketplace_path)
 
       config = load_project_config
       expect(config).to be_a(Hash)
@@ -117,7 +90,7 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "maintains plugins section separately" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace(test_marketplace_path)
 
       config = load_project_config
       expect(config.keys).to include("marketplaces")

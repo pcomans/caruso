@@ -10,62 +10,60 @@ RSpec.describe "Marketplace Removal", type: :integration do
   describe "caruso marketplace remove" do
     context "when marketplace exists" do
       it "removes marketplace from config" do
-        add_marketplace("https://github.com/anthropics/skills", "skills")
+        add_marketplace()
 
         # Verify it was added
-        expect(load_project_config["marketplaces"]).to have_key("skills")
+        expect(load_project_config["marketplaces"]).to have_key("test-skills")
 
-        run_command("caruso marketplace remove skills")
+        run_command("caruso marketplace remove test-skills")
 
         expect(last_command_started).to be_successfully_executed
         config = load_project_config
-        expect(config["marketplaces"]).not_to have_key("skills")
+        expect(config["marketplaces"]).not_to have_key("test-skills")
       end
 
       it "shows confirmation message" do
-        add_marketplace("https://github.com/anthropics/skills", "test-marketplace")
+        add_marketplace()
 
-        run_command("caruso marketplace remove test-marketplace")
+        run_command("caruso marketplace remove test-skills")
 
-        expect(last_command_started).to have_output(/Removed marketplace 'test-marketplace'/)
+        expect(last_command_started).to have_output(/Removed marketplace 'test-skills'/)
       end
 
       it "preserves other marketplaces when removing one" do
-        add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
-        add_marketplace("https://github.com/example/other", "marketplace-2")
-        add_marketplace("https://github.com/example/third", "marketplace-3")
+        add_marketplace(test_marketplace_path)
+        add_marketplace(other_marketplace_path)
 
-        # Verify all were added
+        # Verify both were added
         config_before = load_project_config
-        expect(config_before["marketplaces"].keys).to include("marketplace-1", "marketplace-2", "marketplace-3")
+        expect(config_before["marketplaces"].keys).to include("test-skills", "other-marketplace")
 
-        run_command("caruso marketplace remove marketplace-2")
+        run_command("caruso marketplace remove other-marketplace")
 
         expect(last_command_started).to be_successfully_executed
 
         config = load_project_config
-        expect(config["marketplaces"]).to have_key("marketplace-1")
-        expect(config["marketplaces"]).not_to have_key("marketplace-2")
-        expect(config["marketplaces"]).to have_key("marketplace-3")
+        expect(config["marketplaces"]).to have_key("test-skills")
+        expect(config["marketplaces"]).not_to have_key("other-marketplace")
       end
 
       it "does not affect plugins section when removing marketplace" do
-        add_marketplace("https://github.com/anthropics/skills", "skills")
+        add_marketplace()
 
         # Simulate having a plugin installed
         project_config = load_project_config
         project_config["plugins"] = {
-          "test-plugin@skills" => {
-            "marketplace" => "skills"
+          "test-plugin@test-skills" => {
+            "marketplace" => "test-skills"
           }
         }
         File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso marketplace remove skills")
+        run_command("caruso marketplace remove test-skills")
 
         updated_config = load_project_config
-        expect(updated_config["plugins"]).to have_key("test-plugin@skills")
-        expect(updated_config["plugins"]["test-plugin@skills"]["marketplace"]).to eq("skills")
+        expect(updated_config["plugins"]).to have_key("test-plugin@test-skills")
+        expect(updated_config["plugins"]["test-plugin@test-skills"]["marketplace"]).to eq("test-skills")
       end
     end
 
@@ -77,7 +75,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "does not modify config when removing non-existent marketplace" do
-        add_marketplace("https://github.com/anthropics/skills", "skills")
+        add_marketplace()
 
         config_before = load_project_config
         run_command("caruso marketplace remove nonexistent")
@@ -89,12 +87,12 @@ RSpec.describe "Marketplace Removal", type: :integration do
 
     context "when removing last marketplace" do
       it "leaves empty marketplaces hash" do
-        add_marketplace("https://github.com/anthropics/skills", "skills")
+        add_marketplace()
 
         # Verify it was added
-        expect(load_project_config["marketplaces"]).to have_key("skills")
+        expect(load_project_config["marketplaces"]).to have_key("test-skills")
 
-        run_command("caruso marketplace remove skills")
+        run_command("caruso marketplace remove test-skills")
 
         expect(last_command_started).to be_successfully_executed
 
@@ -104,19 +102,19 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "maintains config structure with other sections" do
-        add_marketplace("https://github.com/anthropics/skills", "skills")
+        add_marketplace()
 
         # Add a plugin to ensure other sections remain
         project_config = load_project_config
-        project_config["plugins"] = { "test@skills" => { "marketplace" => "skills" } }
+        project_config["plugins"] = { "test@test-skills" => { "marketplace" => "test-skills" } }
         File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso marketplace remove skills")
+        run_command("caruso marketplace remove test-skills")
 
         updated_config = load_project_config
         expect(updated_config).to have_key("marketplaces")
         expect(updated_config).to have_key("plugins")
-        expect(updated_config["plugins"]).to have_key("test@skills")
+        expect(updated_config["plugins"]).to have_key("test@test-skills")
       end
     end
 
@@ -129,20 +127,20 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "lists remaining marketplaces after partial removal" do
-        add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
-        add_marketplace("https://github.com/example/other", "marketplace-2")
+        add_marketplace(test_marketplace_path)
+        add_marketplace(other_marketplace_path)
 
         # Verify both were added
-        expect(load_project_config["marketplaces"].keys).to include("marketplace-1", "marketplace-2")
+        expect(load_project_config["marketplaces"].keys).to include("test-skills", "other-marketplace")
 
-        run_command("caruso marketplace remove marketplace-2")
+        run_command("caruso marketplace remove other-marketplace")
 
         expect(last_command_started).to be_successfully_executed
 
         run_command("caruso marketplace list")
 
-        expect(last_command_started).to have_output(/marketplace-1/)
-        expect(last_command_started).not_to have_output(/marketplace-2/)
+        expect(last_command_started).to have_output(/test-skills/)
+        expect(last_command_started).not_to have_output(/other-marketplace/)
       end
     end
   end
@@ -157,7 +155,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
     end
 
     it "handles removal with corrupted marketplace name" do
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace()
 
       run_command("caruso marketplace remove 'name with spaces'")
 
@@ -165,13 +163,13 @@ RSpec.describe "Marketplace Removal", type: :integration do
     end
 
     it "preserves marketplace URLs correctly after removal" do
-      add_marketplace("https://github.com/anthropics/skills", "marketplace-1")
-      add_marketplace("https://github.com/example/plugins.git", "marketplace-2")
+      add_marketplace(test_marketplace_path)
+      add_marketplace(other_marketplace_path)
 
-      run_command("caruso marketplace remove marketplace-1")
+      run_command("caruso marketplace remove test-skills")
 
       config = load_project_config
-      expect(config["marketplaces"]["marketplace-2"]["url"]).to eq("https://github.com/example/plugins.git")
+      expect(config["marketplaces"]["other-marketplace"]["url"]).to eq(other_marketplace_path)
     end
   end
 end

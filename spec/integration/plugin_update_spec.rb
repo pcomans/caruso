@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/skills", "skills")
+    add_marketplace()
   end
 
   describe "plugin reinstallation (update scenario)" do
@@ -15,7 +15,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
-      plugin_key = "#{plugin_name}@skills"
+      plugin_key = "#{plugin_name}@test-skills"
 
       # Install plugin
       run_command("caruso plugin install #{plugin_key}")
@@ -36,13 +36,13 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
     it "allows switching plugin source marketplace" do
       # Add a second marketplace
-      add_marketplace("https://github.com/example/other-marketplace", "other-marketplace")
+      add_marketplace(other_marketplace_path)
 
       # Simulate plugin installed from first marketplace
       project_config = load_project_config
       project_config["plugins"] = {
-        "test-plugin@skills" => {
-          "marketplace" => "skills"
+        "test-plugin@test-skills" => {
+          "marketplace" => "test-skills"
         }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
@@ -50,7 +50,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       # Update the marketplace reference (simulating a switch)
       project_config = load_project_config
       # Remove old key
-      project_config["plugins"].delete("test-plugin@skills")
+      project_config["plugins"].delete("test-plugin@test-skills")
       # Add new key
       project_config["plugins"]["test-plugin@other-marketplace"] = {
         "marketplace" => "other-marketplace"
@@ -68,18 +68,18 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       # Install first plugin
       project_config = load_project_config
       project_config["plugins"] = {
-        "plugin-a@skills" => { "marketplace" => "skills" }
+        "plugin-a@test-skills" => { "marketplace" => "test-skills" }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       # Add second plugin
       project_config = load_project_config
-      project_config["plugins"]["plugin-b@skills"] = { "marketplace" => "skills" }
+      project_config["plugins"]["plugin-b@test-skills"] = { "marketplace" => "test-skills" }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       final_config = load_project_config
-      expect(final_config["plugins"]).to have_key("plugin-a@skills")
-      expect(final_config["plugins"]).to have_key("plugin-b@skills")
+      expect(final_config["plugins"]).to have_key("plugin-a@test-skills")
+      expect(final_config["plugins"]).to have_key("plugin-b@test-skills")
     end
 
     it "maintains marketplace integrity during plugin updates" do
@@ -88,7 +88,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
       # Simulate plugin install
       project_config["plugins"] = {
-        "test-plugin@skills" => { "marketplace" => "skills" }
+        "test-plugin@test-skills" => { "marketplace" => "test-skills" }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
@@ -101,14 +101,14 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
     it "stores marketplace reference for tracking" do
       project_config = load_project_config
       project_config["plugins"] = {
-        "tracked-plugin@skills" => {
-          "marketplace" => "skills"
+        "tracked-plugin@test-skills" => {
+          "marketplace" => "test-skills"
         }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       updated_config = load_project_config
-      expect(updated_config["plugins"]["tracked-plugin@skills"]["marketplace"]).to eq("skills")
+      expect(updated_config["plugins"]["tracked-plugin@test-skills"]["marketplace"]).to eq("test-skills")
     end
 
     it "maintains files list integrity" do
@@ -120,13 +120,13 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
 
       local_config = load_local_config
       local_config["installed_files"] = {
-        "multi-file@skills" => files
+        "multi-file@test-skills" => files
       }
       File.write(local_config_file, JSON.pretty_generate(local_config))
 
       updated_config = load_local_config
-      expect(updated_config["installed_files"]["multi-file@skills"]).to eq(files)
-      expect(updated_config["installed_files"]["multi-file@skills"].length).to eq(3)
+      expect(updated_config["installed_files"]["multi-file@test-skills"]).to eq(files)
+      expect(updated_config["installed_files"]["multi-file@test-skills"].length).to eq(3)
     end
   end
 
@@ -137,7 +137,7 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
-      plugin_key = "#{plugin_name}@skills"
+      plugin_key = "#{plugin_name}@test-skills"
 
       # Install
       run_command("caruso plugin install #{plugin_key}")
@@ -158,23 +158,23 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
     it "handles reinstall without explicit uninstall" do
       project_config = load_project_config
       project_config["plugins"] = {
-        "existing-plugin@skills" => { "marketplace" => "skills" }
+        "existing-plugin@test-skills" => { "marketplace" => "test-skills" }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       local_config = load_local_config
       local_config["installed_files"] = {
-        "existing-plugin@skills" => [".cursor/rules/old.mdc"]
+        "existing-plugin@test-skills" => [".cursor/rules/old.mdc"]
       }
       File.write(local_config_file, JSON.pretty_generate(local_config))
 
       # Simulate reinstall by updating local config
       local_config = load_local_config
-      local_config["installed_files"]["existing-plugin@skills"] = [".cursor/rules/new.mdc"]
+      local_config["installed_files"]["existing-plugin@test-skills"] = [".cursor/rules/new.mdc"]
       File.write(local_config_file, JSON.pretty_generate(local_config))
 
       updated_config = load_local_config
-      expect(updated_config["installed_files"]["existing-plugin@skills"]).to eq([".cursor/rules/new.mdc"])
+      expect(updated_config["installed_files"]["existing-plugin@test-skills"]).to eq([".cursor/rules/new.mdc"])
     end
   end
 end

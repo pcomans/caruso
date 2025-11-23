@@ -70,11 +70,7 @@ Add the official Claude Code marketplace:
 caruso marketplace add https://github.com/anthropics/claude-code
 ```
 
-Add with a custom name:
-
-```bash
-caruso marketplace add https://github.com/anthropics/claude-code claude-official
-```
+The marketplace name is automatically read from the `marketplace.json` file in the repository (in this case, `claude-code-plugins`).
 
 Supported marketplace sources:
 - **GitHub repositories**: `https://github.com/owner/repo`
@@ -196,7 +192,7 @@ caruso init /path/to/project --ide=cursor   # Initialize specific directory
 ### Marketplace Management
 
 ```bash
-caruso marketplace add URL [NAME]      # Add a marketplace
+caruso marketplace add URL             # Add a marketplace (name from marketplace.json)
 caruso marketplace list                # List configured marketplaces
 caruso marketplace remove NAME         # Remove a marketplace
 ```

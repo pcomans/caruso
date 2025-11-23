@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Removal", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/skills", "skills")
+    add_marketplace()
   end
 
   describe "caruso plugin uninstall" do
@@ -18,10 +18,10 @@ RSpec.describe "Plugin Removal", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@skills")
+        run_command("caruso plugin install #{plugin_name}@test-skills")
         expect(last_command_started).to be_successfully_executed
         
-        plugin_key = "#{plugin_name}@skills"
+        plugin_key = "#{plugin_name}@test-skills"
         expect(load_config["plugins"]).to have_key(plugin_key)
 
         # Uninstall it
@@ -37,30 +37,30 @@ RSpec.describe "Plugin Removal", type: :integration do
         # Simulate an installed plugin
         project_config = load_project_config
         project_config["plugins"] = {
-          "test-plugin@skills" => {
-            "marketplace" => "skills"
+          "test-plugin@test-skills" => {
+            "marketplace" => "test-skills"
           }
         }
         File.write(config_file, JSON.pretty_generate(project_config))
 
         local_config = load_local_config
         local_config["installed_files"] = {
-          "test-plugin@skills" => [".cursor/rules/test.mdc"]
+          "test-plugin@test-skills" => [".cursor/rules/test.mdc"]
         }
         File.write(local_config_file, JSON.pretty_generate(local_config))
 
-        run_command("caruso plugin uninstall test-plugin@skills")
+        run_command("caruso plugin uninstall test-plugin@test-skills")
 
-        expect(last_command_started).to have_output(/Removing test-plugin@skills/)
-        expect(last_command_started).to have_output(/Uninstalled test-plugin@skills/)
+        expect(last_command_started).to have_output(/Removing test-plugin@test-skills/)
+        expect(last_command_started).to have_output(/Uninstalled test-plugin@test-skills/)
       end
 
       it "notes files deleted" do
         # Simulate an installed plugin with files
         project_config = load_project_config
         project_config["plugins"] = {
-          "test-plugin@skills" => {
-            "marketplace" => "skills"
+          "test-plugin@test-skills" => {
+            "marketplace" => "test-skills"
           }
         }
         File.write(config_file, JSON.pretty_generate(project_config))
@@ -72,11 +72,11 @@ RSpec.describe "Plugin Removal", type: :integration do
 
         local_config = load_local_config
         local_config["installed_files"] = {
-          "test-plugin@skills" => [".cursor/rules/test.mdc", ".cursor/rules/test2.mdc"]
+          "test-plugin@test-skills" => [".cursor/rules/test.mdc", ".cursor/rules/test2.mdc"]
         }
         File.write(local_config_file, JSON.pretty_generate(local_config))
 
-        run_command("caruso plugin uninstall test-plugin@skills")
+        run_command("caruso plugin uninstall test-plugin@test-skills")
 
         expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test.mdc/)
         expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test2.mdc/)
@@ -95,7 +95,7 @@ RSpec.describe "Plugin Removal", type: :integration do
         # Setup initial state
         project_config = load_project_config
         project_config["plugins"] = {
-          "existing-plugin@skills" => { "marketplace" => "skills" }
+          "existing-plugin@test-skills" => { "marketplace" => "test-skills" }
         }
         File.write(config_file, JSON.pretty_generate(project_config))
 
@@ -115,8 +115,8 @@ RSpec.describe "Plugin Removal", type: :integration do
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
 
-        run_command("caruso plugin install #{plugin_name}@skills")
-        run_command("caruso plugin uninstall #{plugin_name}@skills")
+        run_command("caruso plugin install #{plugin_name}@test-skills")
+        run_command("caruso plugin uninstall #{plugin_name}@test-skills")
         run_command("caruso plugin list")
 
         expect(last_command_started.output).not_to match(/#{plugin_name}.*\[Installed\]/)
@@ -132,17 +132,17 @@ RSpec.describe "Plugin Removal", type: :integration do
 
       project_config = load_project_config
       project_config["plugins"] = {
-        "multi-file-plugin@skills" => { "marketplace" => "skills" }
+        "multi-file-plugin@test-skills" => { "marketplace" => "test-skills" }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       local_config = load_local_config
       local_config["installed_files"] = {
-        "multi-file-plugin@skills" => [".cursor/rules/file1.mdc"]
+        "multi-file-plugin@test-skills" => [".cursor/rules/file1.mdc"]
       }
       File.write(local_config_file, JSON.pretty_generate(local_config))
 
-      run_command("caruso plugin uninstall multi-file-plugin@skills")
+      run_command("caruso plugin uninstall multi-file-plugin@test-skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(File.exist?(".cursor/rules/file1.mdc")).to be false
@@ -151,16 +151,16 @@ RSpec.describe "Plugin Removal", type: :integration do
     it "handles plugin with no files list" do
       project_config = load_project_config
       project_config["plugins"] = {
-        "no-files-plugin@skills" => { "marketplace" => "skills" }
+        "no-files-plugin@test-skills" => { "marketplace" => "test-skills" }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
 
       # No entry in local config installed_files
 
-      run_command("caruso plugin uninstall no-files-plugin@skills")
+      run_command("caruso plugin uninstall no-files-plugin@test-skills")
 
       expect(last_command_started).to be_successfully_executed
-      expect(load_project_config["plugins"]).not_to have_key("no-files-plugin@skills")
+      expect(load_project_config["plugins"]).not_to have_key("no-files-plugin@test-skills")
     end
   end
 end

@@ -1,0 +1,15 @@
+{
+  "name": "test-skills",
+  "owner": {
+    "name": "Test Team",
+    "email": "test@example.com"
+  },
+  "plugins": [
+    {
+      "name": "test-plugin",
+      "source": "./plugins/test-plugin",
+      "description": "A test plugin",
+      "version": "1.0.0"
+    }
+  ]
+}

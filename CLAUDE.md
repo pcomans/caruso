@@ -173,7 +173,7 @@ Returns array of created filenames (not full paths) for manifest tracking.
 #### CLI (`lib/caruso/cli.rb`)
 Thor-based CLI with nested commands:
 - `caruso init [PATH] --ide=cursor`
-- `caruso marketplace add URL [NAME] [--ref=BRANCH]` - Add marketplace with optional Git ref pinning
+- `caruso marketplace add URL [--ref=BRANCH]` - Add marketplace with optional Git ref pinning (name comes from marketplace.json)
 - `caruso marketplace list` - List configured marketplaces
 - `caruso marketplace remove NAME` - Remove marketplace from manifest and registry
 - `caruso marketplace update [NAME]` - Update marketplace cache (all if no name given)
@@ -185,6 +185,7 @@ Thor-based CLI with nested commands:
 - Plugin install format: `plugin@marketplace` or just `plugin` (if only one marketplace configured)
 - Update commands refresh marketplace cache (git pull) before fetching latest plugin files
 - Marketplace add eagerly clones repos unless `CARUSO_TESTING_SKIP_CLONE` env var is set (used in tests)
+- **Marketplace names always come from marketplace.json `name` field (required)** - no custom names allowed
 - Errors use descriptive messages with suggestions (e.g., "use 'caruso marketplace add <url>'")
 
 ### Data Flow Example

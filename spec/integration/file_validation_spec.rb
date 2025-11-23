@@ -7,7 +7,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     # Skip init for config file structure tests - they test init itself
     unless self.class.metadata[:skip_init]
       init_caruso
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace()
     end
   end
 
@@ -17,7 +17,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       match ? match[1] : skip("No plugins available in marketplace")
     end
-    let(:plugin_key) { "#{plugin_name}@skills" }
+    let(:plugin_key) { "#{plugin_name}@test-skills" }
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
@@ -102,7 +102,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       match ? match[1] : skip("No plugins available in marketplace")
     end
-    let(:plugin_key) { "#{plugin_name}@skills" }
+    let(:plugin_key) { "#{plugin_name}@test-skills" }
 
     before do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
@@ -129,7 +129,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
   describe "project config file structure", :skip_init do
     it "creates valid JSON config" do
       init_caruso
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace()
 
       config = load_project_config
       expect(config).to be_a(Hash)
@@ -137,7 +137,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
     it "has marketplaces section" do
       init_caruso
-      add_marketplace("https://github.com/anthropics/skills", "skills")
+      add_marketplace()
 
       config = load_project_config
       expect(config).to have_key("marketplaces")
@@ -150,7 +150,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
-      plugin_key = "#{plugin_name}@skills"
+      plugin_key = "#{plugin_name}@test-skills"
 
       run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
@@ -166,7 +166,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
-      plugin_key = "#{plugin_name}@skills"
+      plugin_key = "#{plugin_name}@test-skills"
 
       run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
@@ -175,7 +175,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       plugin_data = config["plugins"][plugin_key]
 
       expect(plugin_data).to have_key("marketplace")
-      expect(plugin_data["marketplace"]).to eq("skills")
+      expect(plugin_data["marketplace"]).to eq("test-skills")
     end
   end
 
@@ -212,7 +212,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
-      plugin_key = "#{plugin_name}@skills"
+      plugin_key = "#{plugin_name}@test-skills"
 
       run_command("caruso plugin install #{plugin_key}")
       

@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2025-11-23
+
+### Changed
+- **BREAKING**: Marketplace names now read from `marketplace.json` `name` field (required)
+- **BREAKING**: Removed optional `NAME` parameter from `marketplace add` command
+- Cache directory now based on URL for stability, while marketplace name comes from manifest
+- Marketplace.json `name` field is now the authoritative source of truth for marketplace identity
+
+### Fixed
+- Marketplace name resolution now matches Claude Code behavior
+- `https://github.com/anthropics/claude-code` correctly resolves to `claude-code-plugins` (from manifest)
+- Local directory marketplace paths now properly detected and processed
+
+### Added
+- `Fetcher#extract_marketplace_name` public method for reading marketplace names from manifest
+- Support for directory paths in marketplace URLs (auto-detects `.claude-plugin/marketplace.json`)
+- Clear error message when marketplace.json is missing required `name` field
+- Comprehensive test fixtures for offline testing (`spec/fixtures/test-marketplace/`, `spec/fixtures/other-marketplace/`)
+
+### Implementation Details
+This release aligns with Claude Code specification where marketplace `name` field is required. The implementation follows a clean approach with no defensive fallbacks - if marketplace.json is invalid, it fails with a clear error rather than guessing.
+
+Cache directories remain URL-based (`~/.caruso/marketplaces/claude-code/`) for stability, while logical marketplace names (`claude-code-plugins`) come from the manifest, properly decoupling these concerns.
+
 ## [0.3.0] - 2025-11-22
 
 ### Changed
@@ -137,7 +161,10 @@ This release adopts Claude Code's proven architecture patterns:
 - Automatic conversion of Claude Code plugins to Cursor Rules format
 - Plugin metadata preservation and frontmatter injection
 
-[Unreleased]: https://github.com/pcomans/caruso/compare/v0.1.4...HEAD
+[Unreleased]: https://github.com/pcomans/caruso/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/pcomans/caruso/releases/tag/v0.4.0
+[0.3.0]: https://github.com/pcomans/caruso/releases/tag/v0.3.0
+[0.2.0]: https://github.com/pcomans/caruso/releases/tag/v0.2.0
 [0.1.4]: https://github.com/pcomans/caruso/releases/tag/v0.1.4
 [0.1.3]: https://github.com/pcomans/caruso/releases/tag/v0.1.3
 [0.1.2]: https://github.com/pcomans/caruso/releases/tag/v0.1.2
