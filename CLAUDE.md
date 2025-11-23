@@ -272,3 +272,6 @@ Results are deduplicated with `.uniq`.
 8. Push: `git push origin main --tags`
 
 Version is managed in `lib/caruso/version.rb`.
+
+# Memory
+- The goal is a clean, correct, consistent implementation. Never implement fallbacks that hide errors or engage in defensive programming.
