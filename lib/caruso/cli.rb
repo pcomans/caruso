@@ -223,7 +223,9 @@ module Caruso
       adapter = Caruso::Adapter.new(
         files,
         target_dir: target_dir,
-        agent: ide.to_sym
+        agent: ide.to_sym,
+        marketplace_name: marketplace_name,
+        plugin_name: plugin_name
       )
       created_filenames = adapter.adapt
 
@@ -416,7 +418,9 @@ module Caruso
       adapter = Caruso::Adapter.new(
         files,
         target_dir: config_manager.full_target_path,
-        agent: config_manager.ide.to_sym
+        agent: config_manager.ide.to_sym,
+        marketplace_name: marketplace_name,
+        plugin_name: plugin_name
       )
       created_filenames = adapter.adapt
 

@@ -5,12 +5,14 @@ require "yaml"
 
 module Caruso
   class Adapter
-    attr_reader :files, :target_dir, :agent
+    attr_reader :files, :target_dir, :agent, :marketplace_name, :plugin_name
 
-    def initialize(files, target_dir:, agent: :cursor)
+    def initialize(files, target_dir:, marketplace_name:, plugin_name:, agent: :cursor)
       @files = files
       @target_dir = target_dir
       @agent = agent
+      @marketplace_name = marketplace_name
+      @plugin_name = plugin_name
       FileUtils.mkdir_p(@target_dir)
     end
 
@@ -77,13 +79,31 @@ module Caruso
 
       extension = agent == :cursor ? ".mdc" : ".md"
       output_filename = "#{filename}#{extension}"
-      target_path = File.join(@target_dir, output_filename)
+
+      # Extract component type from original path (commands/agents/skills)
+      component_type = extract_component_type(original_path)
+
+      # Build nested directory structure for Cursor
+      # Structure: .cursor/rules/marketplace/plugin/component-type/file.mdc
+      subdirs = File.join(marketplace_name, plugin_name, component_type)
+      output_dir = File.join(@target_dir, subdirs)
+      FileUtils.mkdir_p(output_dir)
+      target_path = File.join(output_dir, output_filename)
 
       File.write(target_path, content)
       puts "Saved: #{target_path}"
 
-      # Return just the filename, not the full path
-      output_filename
+      # Return relative path from target_dir
+      File.join(subdirs, output_filename)
+    end
+
+    def extract_component_type(file_path)
+      # Extract component type (commands/agents/skills) from path
+      return "commands" if file_path.include?("/commands/")
+      return "agents" if file_path.include?("/agents/")
+      return "skills" if file_path.include?("/skills/")
+
+      raise Caruso::Error, "Cannot determine component type from path: #{file_path}"
     end
   end
 end
