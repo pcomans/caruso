@@ -64,7 +64,7 @@ RSpec.configure do |config|
     end
 
     def mdc_files
-      Dir.glob(File.join(aruba.current_directory, ".cursor", "rules", "*.mdc"))
+      Dir.glob(File.join(aruba.current_directory, ".cursor", "rules", "**", "*.mdc"))
     end
 
     def init_caruso(ide: "cursor")
