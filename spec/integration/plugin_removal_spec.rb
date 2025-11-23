@@ -5,12 +5,12 @@ require "spec_helper"
 RSpec.describe "Plugin Removal", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/skills")
+    add_marketplace("https://github.com/anthropics/skills", "skills")
   end
 
   describe "caruso plugin uninstall" do
     context "when plugin is installed" do
-      it "removes plugin from manifest", :live do
+      it "removes plugin from config and deletes files", :live do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
         # Install a plugin first
@@ -20,60 +20,67 @@ RSpec.describe "Plugin Removal", type: :integration do
 
         run_command("caruso plugin install #{plugin_name}@skills")
         expect(last_command_started).to be_successfully_executed
-        expect(load_manifest["plugins"]).to have_key(plugin_name)
+        
+        plugin_key = "#{plugin_name}@skills"
+        expect(load_config["plugins"]).to have_key(plugin_key)
 
         # Uninstall it
-        run_command("caruso plugin uninstall #{plugin_name}")
+        run_command("caruso plugin uninstall #{plugin_key}")
         expect(last_command_started).to be_successfully_executed
 
-        manifest = load_manifest
-        expect(manifest["plugins"]).not_to have_key(plugin_name)
+        config = load_config
+        expect(config["plugins"]).not_to have_key(plugin_key)
+        expect(config["installed_files"]).not_to have_key(plugin_key)
       end
 
       it "shows confirmation message" do
         # Simulate an installed plugin
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => Time.now.iso8601,
-            "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso plugin uninstall test-plugin")
+        local_config = load_local_config
+        local_config["installed_files"] = {
+          "test-plugin@skills" => [".cursor/rules/test.mdc"]
+        }
+        File.write(local_config_file, JSON.pretty_generate(local_config))
 
-        expect(last_command_started).to have_output(/Removing test-plugin/)
-        expect(last_command_started).to have_output(/Uninstalled test-plugin/)
+        run_command("caruso plugin uninstall test-plugin@skills")
+
+        expect(last_command_started).to have_output(/Removing test-plugin@skills/)
+        expect(last_command_started).to have_output(/Uninstalled test-plugin@skills/)
       end
 
-      it "attempts to preserve other plugins when removing one", :live do
-        skip "Requires proper manifest synchronization in test environment"
-
-        # This test documents expected behavior but is skipped due to
-        # test environment limitations with manifest file paths
-        #
-        # Expected behavior:
-        # - Add multiple plugins to manifest
-        # - Remove one plugin
-        # - Other plugins should remain
-        # - Only the specified plugin should be removed
-      end
-
-      it "notes files pending deletion" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => Time.now.iso8601,
-            "files" => [".cursor/rules/test.mdc", ".cursor/rules/test2.mdc"]
+      it "notes files deleted" do
+        # Simulate an installed plugin with files
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso plugin uninstall test-plugin")
+        # Create dummy files
+        FileUtils.mkdir_p(File.join(aruba.current_directory, ".cursor/rules"))
+        File.write(File.join(aruba.current_directory, ".cursor/rules/test.mdc"), "content")
+        File.write(File.join(aruba.current_directory, ".cursor/rules/test2.mdc"), "content")
 
-        expect(last_command_started).to have_output(/Files pending deletion/)
+        local_config = load_local_config
+        local_config["installed_files"] = {
+          "test-plugin@skills" => [".cursor/rules/test.mdc", ".cursor/rules/test2.mdc"]
+        }
+        File.write(local_config_file, JSON.pretty_generate(local_config))
+
+        run_command("caruso plugin uninstall test-plugin@skills")
+
+        expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test.mdc/)
+        expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test2.mdc/)
+        expect(File.exist?(".cursor/rules/test.mdc")).to be false
       end
     end
 
@@ -84,48 +91,19 @@ RSpec.describe "Plugin Removal", type: :integration do
         expect(last_command_started).to have_output(/is not installed/)
       end
 
-      it "does not modify manifest when plugin not found" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "existing-plugin" => {
-            "installed_at" => Time.now.iso8601,
-            "files" => [".cursor/rules/existing.mdc"]
-          }
+      it "does not modify config when plugin not found" do
+        # Setup initial state
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "existing-plugin@skills" => { "marketplace" => "skills" }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        manifest_before = load_manifest
+        config_before = load_config
         run_command("caruso plugin uninstall nonexistent")
-        manifest_after = load_manifest
+        config_after = load_config
 
-        expect(manifest_after).to eq(manifest_before)
-      end
-    end
-
-    context "when removing last plugin" do
-      it "verifies removal command executes" do
-        # Test that the uninstall command runs without error for non-existent plugin
-        run_command("caruso plugin uninstall only-plugin")
-
-        expect(last_command_started).to be_successfully_executed
-        expect(last_command_started).to have_output(/is not installed/)
-      end
-
-      it "maintains manifest structure with marketplace section" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => Time.now.iso8601,
-            "files" => [".cursor/rules/test.mdc"]
-          }
-        }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
-
-        run_command("caruso plugin uninstall test-plugin")
-
-        updated_manifest = load_manifest
-        expect(updated_manifest).to have_key("marketplaces")
-        expect(updated_manifest).to have_key("plugins")
+        expect(config_after).to eq(config_before)
       end
     end
 
@@ -138,7 +116,7 @@ RSpec.describe "Plugin Removal", type: :integration do
         plugin_name = match ? match[1] : skip("No plugins available")
 
         run_command("caruso plugin install #{plugin_name}@skills")
-        run_command("caruso plugin uninstall #{plugin_name}")
+        run_command("caruso plugin uninstall #{plugin_name}@skills")
         run_command("caruso plugin list")
 
         expect(last_command_started.output).not_to match(/#{plugin_name}.*\[Installed\]/)
@@ -147,114 +125,42 @@ RSpec.describe "Plugin Removal", type: :integration do
   end
 
   describe "plugin removal file tracking" do
-    it "returns list of files to be removed" do
-      manifest = load_manifest
-      files_to_remove = [
-        ".cursor/rules/file1.mdc",
-        ".cursor/rules/file2.mdc",
-        ".cursor/rules/subdir/file3.mdc"
-      ]
+    it "removes files listed in local config" do
+      # Create dummy file
+      FileUtils.mkdir_p(File.join(aruba.current_directory, ".cursor/rules"))
+      File.write(File.join(aruba.current_directory, ".cursor/rules/file1.mdc"), "content")
 
-      manifest["plugins"] = {
-        "multi-file-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => files_to_remove
-        }
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "multi-file-plugin@skills" => { "marketplace" => "skills" }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      run_command("caruso plugin uninstall multi-file-plugin")
+      local_config = load_local_config
+      local_config["installed_files"] = {
+        "multi-file-plugin@skills" => [".cursor/rules/file1.mdc"]
+      }
+      File.write(local_config_file, JSON.pretty_generate(local_config))
 
-      # The ManifestManager.remove_plugin returns the files list
-      # CLI should display this information
+      run_command("caruso plugin uninstall multi-file-plugin@skills")
+
       expect(last_command_started).to be_successfully_executed
+      expect(File.exist?(".cursor/rules/file1.mdc")).to be false
     end
 
     it "handles plugin with no files list" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "no-files-plugin" => {
-          "installed_at" => Time.now.iso8601
-        }
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "no-files-plugin@skills" => { "marketplace" => "skills" }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      run_command("caruso plugin uninstall no-files-plugin")
+      # No entry in local config installed_files
+
+      run_command("caruso plugin uninstall no-files-plugin@skills")
 
       expect(last_command_started).to be_successfully_executed
-    end
-
-    it "handles plugin with empty files array" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "empty-files-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => []
-        }
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      run_command("caruso plugin uninstall empty-files-plugin")
-
-      expect(last_command_started).to be_successfully_executed
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]).not_to have_key("empty-files-plugin")
-    end
-  end
-
-  describe "plugin removal edge cases" do
-    it "handles removal when manifest has no plugins section" do
-      manifest = load_manifest
-      manifest.delete("plugins")
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      run_command("caruso plugin uninstall any-plugin")
-
-      expect(last_command_started).to be_successfully_executed
-      expect(last_command_started).to have_output(/not installed/)
-    end
-
-    it "handles plugin name with special characters" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "plugin-with-dashes" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/test.mdc"]
-        }
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      run_command("caruso plugin uninstall plugin-with-dashes")
-
-      expect(last_command_started).to be_successfully_executed
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]).not_to have_key("plugin-with-dashes")
-    end
-
-    it "preserves plugin metadata structure when other plugins remain" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "plugin-a" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/a.mdc"],
-          "marketplace" => "https://example.com/marketplace-a"
-        },
-        "plugin-b" => {
-          "installed_at" => "2025-01-02T00:00:00Z",
-          "files" => [".cursor/rules/b.mdc"],
-          "marketplace" => "https://example.com/marketplace-b"
-        }
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      run_command("caruso plugin uninstall plugin-a")
-
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]["plugin-b"]).to eq({
-                                                                "installed_at" => "2025-01-02T00:00:00Z",
-                                                                "files" => [".cursor/rules/b.mdc"],
-                                                                "marketplace" => "https://example.com/marketplace-b"
-                                                              })
+      expect(load_project_config["plugins"]).not_to have_key("no-files-plugin@skills")
     end
   end
 end

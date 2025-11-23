@@ -5,55 +5,29 @@ require "spec_helper"
 RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
   before do
     init_caruso
-    add_marketplace("https://github.com/anthropics/skills")
+    add_marketplace("https://github.com/anthropics/skills", "skills")
   end
 
   describe "plugin reinstallation (update scenario)" do
-    it "updates plugin metadata when reinstalling", :live do
-      skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-
-      run_command("caruso plugin list")
-      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
-      plugin_name = match ? match[1] : skip("No plugins available")
-
-      # Install plugin first time
-      run_command("caruso plugin install #{plugin_name}@skills")
-      expect(last_command_started).to be_successfully_executed
-      first_install = load_manifest
-      first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
-
-      # Ensure timestamp resolution (ISO8601 has second precision)
-      # Note: Can't use Timecop here because caruso runs in a subprocess
-      sleep 1.1
-
-      # Reinstall the plugin
-      run_command("caruso plugin install #{plugin_name}@skills")
-      expect(last_command_started).to be_successfully_executed
-
-      second_install = load_manifest
-      second_timestamp = second_install["plugins"][plugin_name]["installed_at"]
-
-      # Timestamp should be updated
-      expect(second_timestamp).not_to eq(first_timestamp)
-      expect(Time.parse(second_timestamp)).to be > Time.parse(first_timestamp)
-    end
-
     it "replaces old files when reinstalling", :live do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
+      plugin_key = "#{plugin_name}@skills"
 
       # Install plugin
-      run_command("caruso plugin install #{plugin_name}@skills")
+      run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      first_files = load_manifest["plugins"][plugin_name]["files"]
+      
+      first_files = load_local_config["installed_files"][plugin_key]
 
       # Reinstall
-      run_command("caruso plugin install #{plugin_name}@skills")
+      run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      second_files = load_manifest["plugins"][plugin_name]["files"]
+      
+      second_files = load_local_config["installed_files"][plugin_key]
 
       # Files list should be updated (even if identical in this case)
       expect(second_files).to be_an(Array)
@@ -65,147 +39,76 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       add_marketplace("https://github.com/example/other-marketplace", "other-marketplace")
 
       # Simulate plugin installed from first marketplace
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "test-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/test.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills"
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "test-plugin@skills" => {
+          "marketplace" => "skills"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      # Update the marketplace reference
-      manifest = load_manifest
-      manifest["plugins"]["test-plugin"]["marketplace"] = "https://github.com/example/other-marketplace"
-      manifest["plugins"]["test-plugin"]["installed_at"] = Time.now.iso8601
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]["test-plugin"]["marketplace"]).to eq("https://github.com/example/other-marketplace")
-    end
-  end
-
-  describe "plugin version tracking" do
-    it "maintains version information if available", :live do
-      skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-
-      run_command("caruso plugin list")
-      match = last_command_started.output.match(/^\s+-\s+(\S+)/)
-      plugin_name = match ? match[1] : skip("No plugins available")
-
-      run_command("caruso plugin install #{plugin_name}@skills")
-      expect(last_command_started).to be_successfully_executed
-      manifest = load_manifest
-
-      # Check if version info is tracked (implementation may vary)
-      plugin_data = manifest["plugins"][plugin_name]
-      expect(plugin_data).to have_key("installed_at")
-      expect(plugin_data).to have_key("marketplace")
-    end
-
-    it "preserves custom plugin metadata on reinstall" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "custom-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/custom.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills",
-          "custom_field" => "custom_value"
-        }
+      # Update the marketplace reference (simulating a switch)
+      project_config = load_project_config
+      # Remove old key
+      project_config["plugins"].delete("test-plugin@skills")
+      # Add new key
+      project_config["plugins"]["test-plugin@other-marketplace"] = {
+        "marketplace" => "other-marketplace"
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      # Simulate reinstall by updating the manifest
-      manifest = load_manifest
-      manifest["plugins"]["custom-plugin"]["installed_at"] = Time.now.iso8601
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      updated_manifest = load_manifest
-      # Custom fields may or may not be preserved depending on implementation
-      expect(updated_manifest["plugins"]["custom-plugin"]["installed_at"]).not_to eq("2025-01-01T00:00:00Z")
+      updated_config = load_project_config
+      expect(updated_config["plugins"]).to have_key("test-plugin@other-marketplace")
+      expect(updated_config["plugins"]["test-plugin@other-marketplace"]["marketplace"]).to eq("other-marketplace")
     end
   end
 
   describe "concurrent plugin operations" do
     it "handles installing plugin while another exists" do
       # Install first plugin
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "plugin-a" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/a.mdc"]
-        }
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "plugin-a@skills" => { "marketplace" => "skills" }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
       # Add second plugin
-      manifest = load_manifest
-      manifest["plugins"]["plugin-b"] = {
-        "installed_at" => Time.now.iso8601,
-        "files" => [".cursor/rules/b.mdc"]
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      project_config = load_project_config
+      project_config["plugins"]["plugin-b@skills"] = { "marketplace" => "skills" }
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      final_manifest = load_manifest
-      expect(final_manifest["plugins"]).to have_key("plugin-a")
-      expect(final_manifest["plugins"]).to have_key("plugin-b")
+      final_config = load_project_config
+      expect(final_config["plugins"]).to have_key("plugin-a@skills")
+      expect(final_config["plugins"]).to have_key("plugin-b@skills")
     end
 
     it "maintains marketplace integrity during plugin updates" do
-      manifest = load_manifest
-      original_marketplaces = manifest["marketplaces"].dup
+      project_config = load_project_config
+      original_marketplaces = project_config["marketplaces"].dup
 
       # Simulate plugin install
-      manifest["plugins"] = {
-        "test-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/test.mdc"]
-        }
+      project_config["plugins"] = {
+        "test-plugin@skills" => { "marketplace" => "skills" }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      updated_manifest = load_manifest
-      expect(updated_manifest["marketplaces"]).to eq(original_marketplaces)
+      updated_config = load_project_config
+      expect(updated_config["marketplaces"]).to eq(original_marketplaces)
     end
   end
 
   describe "plugin metadata updates" do
-    it "tracks installation timestamp" do
-      before_time = Time.now - 1 # 1 second before to account for precision
-
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "timestamped-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/timestamp.mdc"]
-        }
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      after_time = Time.now + 1 # 1 second after to account for precision
-      updated_manifest = load_manifest
-      timestamp = Time.parse(updated_manifest["plugins"]["timestamped-plugin"]["installed_at"])
-
-      expect(timestamp).to be >= before_time
-      expect(timestamp).to be <= after_time
-    end
-
     it "stores marketplace reference for tracking" do
-      marketplace_url = "https://github.com/anthropics/skills"
-
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "tracked-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/tracked.mdc"],
-          "marketplace" => marketplace_url
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "tracked-plugin@skills" => {
+          "marketplace" => "skills"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]["tracked-plugin"]["marketplace"]).to eq(marketplace_url)
+      updated_config = load_project_config
+      expect(updated_config["plugins"]["tracked-plugin@skills"]["marketplace"]).to eq("skills")
     end
 
     it "maintains files list integrity" do
@@ -215,18 +118,15 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
         ".cursor/rules/subdir/file3.mdc"
       ]
 
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "multi-file" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => files
-        }
+      local_config = load_local_config
+      local_config["installed_files"] = {
+        "multi-file@skills" => files
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(local_config_file, JSON.pretty_generate(local_config))
 
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]["multi-file"]["files"]).to eq(files)
-      expect(updated_manifest["plugins"]["multi-file"]["files"].length).to eq(3)
+      updated_config = load_local_config
+      expect(updated_config["installed_files"]["multi-file@skills"]).to eq(files)
+      expect(updated_config["installed_files"]["multi-file@skills"].length).to eq(3)
     end
   end
 
@@ -237,41 +137,44 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
+      plugin_key = "#{plugin_name}@skills"
 
       # Install
-      run_command("caruso plugin install #{plugin_name}@skills")
+      run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      expect(load_manifest["plugins"]).to have_key(plugin_name)
+      expect(load_project_config["plugins"]).to have_key(plugin_key)
 
       # Uninstall
-      run_command("caruso plugin uninstall #{plugin_name}")
+      run_command("caruso plugin uninstall #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      expect(load_manifest["plugins"]).not_to have_key(plugin_name)
+      expect(load_project_config["plugins"]).not_to have_key(plugin_key)
 
       # Reinstall
-      run_command("caruso plugin install #{plugin_name}@skills")
+      run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      expect(load_manifest["plugins"]).to have_key(plugin_name)
+      expect(load_project_config["plugins"]).to have_key(plugin_key)
     end
 
     it "handles reinstall without explicit uninstall" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "existing-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/old.mdc"]
-        }
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "existing-plugin@skills" => { "marketplace" => "skills" }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      # Simulate reinstall by updating
-      manifest = load_manifest
-      manifest["plugins"]["existing-plugin"]["installed_at"] = Time.now.iso8601
-      manifest["plugins"]["existing-plugin"]["files"] = [".cursor/rules/new.mdc"]
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      local_config = load_local_config
+      local_config["installed_files"] = {
+        "existing-plugin@skills" => [".cursor/rules/old.mdc"]
+      }
+      File.write(local_config_file, JSON.pretty_generate(local_config))
 
-      updated_manifest = load_manifest
-      expect(updated_manifest["plugins"]["existing-plugin"]["files"]).to eq([".cursor/rules/new.mdc"])
+      # Simulate reinstall by updating local config
+      local_config = load_local_config
+      local_config["installed_files"]["existing-plugin@skills"] = [".cursor/rules/new.mdc"]
+      File.write(local_config_file, JSON.pretty_generate(local_config))
+
+      updated_config = load_local_config
+      expect(updated_config["installed_files"]["existing-plugin@skills"]).to eq([".cursor/rules/new.mdc"])
     end
   end
 end

@@ -16,18 +16,18 @@ RSpec.describe "Marketplace Management", type: :integration do
       expect(last_command_started).to have_output(/skills/)
     end
 
-    it "creates manifest file" do
-      add_marketplace("https://github.com/anthropics/skills")
+    it "creates config file" do
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
-      expect(File.exist?(manifest_file)).to be true
+      expect(File.exist?(config_file)).to be true
     end
 
-    it "registers marketplace in manifest" do
-      add_marketplace("https://github.com/anthropics/skills")
+    it "registers marketplace in config" do
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("skills")
-      expect(manifest["marketplaces"]["skills"]).to include("skills")
+      config = load_project_config
+      expect(config["marketplaces"]).to have_key("skills")
+      expect(config["marketplaces"]["skills"]["url"]).to include("skills")
     end
 
     it "adds marketplace with custom name" do
@@ -36,15 +36,15 @@ RSpec.describe "Marketplace Management", type: :integration do
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/custom-name/)
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("custom-name")
+      config = load_project_config
+      expect(config["marketplaces"]).to have_key("custom-name")
     end
 
     it "extracts name from URL if not provided" do
       add_marketplace("https://github.com/anthropics/skills")
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("skills")
+      config = load_project_config
+      expect(config["marketplaces"]).to have_key("skills")
     end
 
     it "handles .git extension in URL" do
@@ -52,8 +52,8 @@ RSpec.describe "Marketplace Management", type: :integration do
 
       expect(last_command_started).to be_successfully_executed
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]).to have_key("skills")
+      config = load_project_config
+      expect(config["marketplaces"]).to have_key("skills")
     end
   end
 
@@ -66,7 +66,7 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
 
     it "lists configured marketplaces" do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
       run_command("caruso marketplace list")
 
@@ -89,15 +89,15 @@ RSpec.describe "Marketplace Management", type: :integration do
 
   describe "caruso marketplace remove" do
     it "removes a marketplace" do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
       run_command("caruso marketplace remove skills")
 
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/Removed marketplace/)
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]).not_to have_key("skills")
+      config = load_project_config
+      expect(config["marketplaces"]).not_to have_key("skills")
     end
 
     it "handles removing non-existent marketplace gracefully" do
@@ -107,20 +107,20 @@ RSpec.describe "Marketplace Management", type: :integration do
     end
   end
 
-  describe "marketplace manifest structure" do
+  describe "marketplace config structure" do
     it "creates proper JSON structure" do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
-      manifest = load_manifest
-      expect(manifest).to be_a(Hash)
-      expect(manifest["marketplaces"]).to be_a(Hash)
+      config = load_project_config
+      expect(config).to be_a(Hash)
+      expect(config["marketplaces"]).to be_a(Hash)
     end
 
     it "maintains plugins section separately" do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
-      manifest = load_manifest
-      expect(manifest.keys).to include("marketplaces")
+      config = load_project_config
+      expect(config.keys).to include("marketplaces")
       # Plugins section added later during plugin installation
     end
   end

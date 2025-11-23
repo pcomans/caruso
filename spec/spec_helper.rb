@@ -48,19 +48,25 @@ RSpec.configure do |config|
   # Helper methods available in all specs
   config.include(Module.new do
     def config_file
-      File.join(aruba.current_directory, ".caruso.json")
+      File.join(aruba.current_directory, "caruso.json")
     end
 
-    def manifest_file
-      File.join(aruba.current_directory, ".cursor", "rules", "caruso.json")
+    def local_config_file
+      File.join(aruba.current_directory, ".caruso.local.json")
     end
 
     def load_config
+      project_config = JSON.parse(File.read(config_file))
+      local_config = JSON.parse(File.read(local_config_file))
+      project_config.merge(local_config)
+    end
+
+    def load_project_config
       JSON.parse(File.read(config_file))
     end
 
-    def load_manifest
-      JSON.parse(File.read(manifest_file))
+    def load_local_config
+      JSON.parse(File.read(local_config_file))
     end
 
     def mdc_files

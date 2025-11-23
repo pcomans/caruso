@@ -84,8 +84,9 @@ module Caruso
       component_type = extract_component_type(original_path)
 
       # Build nested directory structure for Cursor
-      # Structure: .cursor/rules/marketplace/plugin/component-type/file.mdc
-      subdirs = File.join(marketplace_name, plugin_name, component_type)
+      # Build nested directory structure for Cursor
+      # Structure: .cursor/rules/caruso/marketplace/plugin/component-type/file.mdc
+      subdirs = File.join("caruso", marketplace_name, plugin_name, component_type)
       output_dir = File.join(@target_dir, subdirs)
       FileUtils.mkdir_p(output_dir)
       target_path = File.join(output_dir, output_filename)

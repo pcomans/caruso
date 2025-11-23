@@ -10,6 +10,7 @@ RSpec.describe "Caruso Initialization", type: :integration do
       expect(last_command_started).to be_successfully_executed
       expect(last_command_started).to have_output(/✓ Initialized Caruso for cursor/)
       expect(File.exist?(config_file)).to be true
+      expect(File.exist?(local_config_file)).to be true
     end
 
     it "creates valid config file" do
@@ -19,7 +20,6 @@ RSpec.describe "Caruso Initialization", type: :integration do
       expect(config["ide"]).to eq("cursor")
       expect(config["target_dir"]).to eq(".cursor/rules")
       expect(config["version"]).to eq("1.0.0")
-      expect(config["initialized_at"]).to match(/\d{4}-\d{2}-\d{2}T/)
     end
 
     it "shows project directory in output" do
@@ -27,7 +27,8 @@ RSpec.describe "Caruso Initialization", type: :integration do
 
       expect(last_command_started).to have_output(/Project directory:/)
       expect(last_command_started).to have_output(%r{Target directory: \.cursor/rules})
-      expect(last_command_started).to have_output(/Config saved to:/)
+      expect(last_command_started).to have_output(/Project Config:/)
+      expect(last_command_started).to have_output(/Local Config:/)
     end
 
     it "prevents double initialization" do
@@ -58,7 +59,8 @@ RSpec.describe "Caruso Initialization", type: :integration do
       run_command("caruso init subproject --ide=cursor")
 
       expect(last_command_started).to be_successfully_executed
-      expect(File.exist?(File.join(aruba.current_directory, "subproject", ".caruso.json"))).to be true
+      expect(File.exist?(File.join(aruba.current_directory, "subproject", "caruso.json"))).to be true
+      expect(File.exist?(File.join(aruba.current_directory, "subproject", ".caruso.local.json"))).to be true
     end
   end
 

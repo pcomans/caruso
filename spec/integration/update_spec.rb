@@ -10,7 +10,7 @@ RSpec.describe "Update Functionality", type: :integration do
   describe "caruso marketplace update" do
     context "when marketplace exists" do
       before do
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
       end
 
       it "updates a specific marketplace", :live do
@@ -44,7 +44,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
     context "when marketplace does not exist" do
       before do
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
       end
 
       it "shows error message" do
@@ -54,11 +54,11 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "does not modify manifest" do
-        manifest_before = load_manifest
+        config_before = load_project_config
         run_command("caruso marketplace update nonexistent")
-        manifest_after = load_manifest
+        config_after = load_project_config
 
-        expect(manifest_after).to eq(manifest_before)
+        expect(config_after).to eq(config_before)
       end
     end
 
@@ -96,7 +96,7 @@ RSpec.describe "Update Functionality", type: :integration do
       it "refreshes marketplace cache" do
         # This test verifies that the update command refreshes the cached marketplace data
         # In practice, this means git pull on the cached repo
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         run_command("caruso marketplace update skills")
 
@@ -104,7 +104,7 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "updates timestamp of last marketplace fetch" do
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         before_time = Time.now - 1
         run_command("caruso marketplace update skills")
@@ -118,7 +118,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "caruso plugin update" do
     before do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
     end
 
     context "when plugin is installed" do
@@ -129,58 +129,31 @@ RSpec.describe "Update Functionality", type: :integration do
         run_command("caruso plugin list")
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
+        plugin_key = "#{plugin_name}@skills"
 
-        run_command("caruso plugin install #{plugin_name}@skills")
+        run_command("caruso plugin install #{plugin_key}")
         expect(last_command_started).to be_successfully_executed
 
         # Update the plugin
-        run_command("caruso plugin update #{plugin_name}")
+        run_command("caruso plugin update #{plugin_key}")
 
         expect(last_command_started).to be_successfully_executed
-        expect(last_command_started).to have_output(/Updated #{plugin_name}/)
+        expect(last_command_started).to have_output(/Updated #{plugin_key}/)
       end
 
       it "shows updating message" do
         # Simulate installed plugin
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso plugin update test-plugin")
+        run_command("caruso plugin update test-plugin@skills")
 
-        expect(last_command_started).to have_output(/Updating test-plugin/)
-      end
-
-      it "updates plugin metadata timestamp", :live do
-        skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
-
-        run_command("caruso plugin list")
-        match = last_command_started.output.match(/^\s+-\s+(\S+)/)
-        plugin_name = match ? match[1] : skip("No plugins available")
-
-        # Install plugin
-        run_command("caruso plugin install #{plugin_name}@skills")
-        expect(last_command_started).to be_successfully_executed
-        first_install = load_manifest
-        first_timestamp = first_install["plugins"][plugin_name]["installed_at"]
-
-        # Update plugin
-        Timecop.travel(Time.now + 2) do
-          run_command("caruso plugin update #{plugin_name}")
-          expect(last_command_started).to be_successfully_executed
-        end
-
-        second_install = load_manifest
-        second_timestamp = second_install["plugins"][plugin_name]["installed_at"]
-
-        expect(second_timestamp).not_to eq(first_timestamp)
-        expect(Time.parse(second_timestamp)).to be > Time.parse(first_timestamp)
+        expect(last_command_started).to have_output(/Updating test-plugin@skills/)
       end
 
       it "automatically updates marketplace before updating plugin", :live do
@@ -189,31 +162,36 @@ RSpec.describe "Update Functionality", type: :integration do
         run_command("caruso plugin list")
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
+        plugin_key = "#{plugin_name}@skills"
 
-        run_command("caruso plugin install #{plugin_name}@skills")
+        run_command("caruso plugin install #{plugin_key}")
         expect(last_command_started).to be_successfully_executed
-        run_command("caruso plugin update #{plugin_name}")
+        run_command("caruso plugin update #{plugin_key}")
 
         # Should see marketplace update happening
         expect(last_command_started).to have_output(/Updating/)
       end
 
       it "updates plugin files" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/old-file.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso plugin update test-plugin")
+        local_config = load_local_config
+        local_config["installed_files"] = {
+          "test-plugin@skills" => [".cursor/rules/old-file.mdc"]
+        }
+        File.write(local_config_file, JSON.pretty_generate(local_config))
+
+        run_command("caruso plugin update test-plugin@skills")
 
         # Files list should be updated
-        updated_manifest = load_manifest
-        expect(updated_manifest["plugins"]["test-plugin"]["files"]).to be_an(Array)
+        updated_config = load_local_config
+        expect(updated_config["installed_files"]["test-plugin@skills"]).to be_an(Array)
       end
 
       it "shows already up to date message when no updates available", :live do
@@ -222,11 +200,12 @@ RSpec.describe "Update Functionality", type: :integration do
         run_command("caruso plugin list")
         match = last_command_started.output.match(/^\s+-\s+(\S+)/)
         plugin_name = match ? match[1] : skip("No plugins available")
+        plugin_key = "#{plugin_name}@skills"
 
-        run_command("caruso plugin install #{plugin_name}@skills")
+        run_command("caruso plugin install #{plugin_key}")
 
         # Update immediately - should be up to date
-        run_command("caruso plugin update #{plugin_name}")
+        run_command("caruso plugin update #{plugin_key}")
 
         expect(last_command_started).to be_successfully_executed
         # Plugin should be updated (or shown as current)
@@ -237,7 +216,7 @@ RSpec.describe "Update Functionality", type: :integration do
       it "shows plugin not installed error" do
         run_command("caruso plugin update nonexistent-plugin")
 
-        expect(last_command_started).to have_output(/Plugin 'nonexistent-plugin' is not installed/)
+        expect(last_command_started).to have_output(/Error: Plugin 'nonexistent-plugin' is not installed/)
       end
 
       it "suggests installing the plugin" do
@@ -247,11 +226,11 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "does not modify manifest" do
-        manifest_before = load_manifest
+        config_before = load_project_config
         run_command("caruso plugin update nonexistent-plugin")
-        manifest_after = load_manifest
+        config_after = load_project_config
 
-        expect(manifest_after).to eq(manifest_before)
+        expect(config_after).to eq(config_before)
       end
     end
 
@@ -282,34 +261,21 @@ RSpec.describe "Update Functionality", type: :integration do
         expect(last_command_started).to have_output(/No plugins installed/)
       end
 
-      it "attempts to update plugin timestamps", :live do
-        skip "This test requires plugins that can actually be fetched from marketplace"
-
-        # Note: This test documents expected behavior but requires real plugins
-        # When plugin update --all runs:
-        # 1. It should iterate through all installed plugins
-        # 2. Update marketplace cache for each
-        # 3. Fetch latest plugin files
-        # 4. Update timestamp to current time
-        #
-        # Timestamp updates verified in live tests with real marketplace access
-      end
-
       it "continues updating other plugins if one fails" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "good-plugin" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/good.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "good-plugin@skills" => {
+            "marketplace" => "skills"
           },
-          "bad-plugin" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/bad.mdc"],
-            "marketplace" => "https://invalid-marketplace.com/bad"
+          "bad-plugin@bad-marketplace" => {
+            "marketplace" => "bad-marketplace"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
+
+        # Add bad marketplace to config so it tries to update
+        project_config["marketplaces"]["bad-marketplace"] = { "url" => "https://invalid-marketplace.com/bad" }
+        File.write(config_file, JSON.pretty_generate(project_config))
 
         run_command("caruso plugin update --all")
 
@@ -318,20 +284,16 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "shows count of updated plugins" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "plugin-1" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/p1.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "plugin-1@skills" => {
+            "marketplace" => "skills"
           },
-          "plugin-2" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/p2.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+          "plugin-2@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
         run_command("caruso plugin update --all")
 
@@ -351,28 +313,26 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "handles missing or inaccessible marketplace" do
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => "2025-01-01T00:00:00Z",
-            "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/nonexistent/marketplace"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@nonexistent" => {
+            "marketplace" => "nonexistent"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
-        run_command("caruso plugin update test-plugin")
+        run_command("caruso plugin update test-plugin@nonexistent")
 
         # Should fail with non-zero exit code
         expect(last_command_started).not_to be_successfully_executed
-        expect(last_command_started).to have_output(/Updating test-plugin/)
+        expect(last_command_started).to have_output(/Updating test-plugin@nonexistent/)
       end
     end
   end
 
   describe "caruso plugin outdated" do
     before do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
     end
 
     it "shows plugins with updates available", :live do
@@ -381,24 +341,22 @@ RSpec.describe "Update Functionality", type: :integration do
       run_command("caruso plugin list")
       match = last_command_started.output.match(/^\s+-\s+(\S+)/)
       plugin_name = match ? match[1] : skip("No plugins available")
+      plugin_key = "#{plugin_name}@skills"
 
-      run_command("caruso plugin install #{plugin_name}@skills")
+      run_command("caruso plugin install #{plugin_key}")
       run_command("caruso plugin outdated")
 
       expect(last_command_started).to be_successfully_executed
     end
 
     it "shows message when all plugins are up to date" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "current-plugin" => {
-          "installed_at" => Time.now.iso8601,
-          "files" => [".cursor/rules/current.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills",
-          "version" => "1.0.0"
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "current-plugin@skills" => {
+          "marketplace" => "skills"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
       run_command("caruso plugin outdated")
 
@@ -411,42 +369,19 @@ RSpec.describe "Update Functionality", type: :integration do
       expect(last_command_started).to have_output(/No plugins installed/)
     end
 
-    it "displays current and available versions" do
-      # This test documents the expected format
-      # Format: plugin-name: 1.0.0 → 1.2.0 available
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "versioned-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/versioned.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills",
-          "version" => "1.0.0"
-        }
-      }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-
-      run_command("caruso plugin outdated")
-
-      expect(last_command_started).to be_successfully_executed
-    end
-
     it "checks all marketplaces for updates" do
       add_marketplace("https://github.com/example/other", "other-marketplace")
 
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "plugin-1" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/p1.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills"
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "plugin-1@skills" => {
+          "marketplace" => "skills"
         },
-        "plugin-2" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/p2.mdc"],
-          "marketplace" => "https://github.com/example/other"
+        "plugin-2@other-marketplace" => {
+          "marketplace" => "other-marketplace"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      File.write(config_file, JSON.pretty_generate(project_config))
 
       run_command("caruso plugin outdated")
 
@@ -456,60 +391,44 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "update edge cases" do
     before do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
     end
 
     it "handles network failures gracefully" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "test-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/test.mdc"],
-          "marketplace" => "https://invalid-network-address.com/repo"
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "test-plugin@bad-marketplace" => {
+          "marketplace" => "bad-marketplace"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
+      # Add bad marketplace to config so it tries to update
+      project_config["marketplaces"]["bad-marketplace"] = { "url" => "https://invalid-network-address.com/repo" }
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      run_command("caruso plugin update test-plugin")
+      run_command("caruso plugin update test-plugin@bad-marketplace")
 
       expect(last_command_started).to have_output(/error|failed/i)
     end
 
     it "preserves plugin metadata on update failure" do
-      manifest = load_manifest
-      manifest["plugins"] = {
-        "test-plugin" => {
-          "installed_at" => "2025-01-01T00:00:00Z",
-          "files" => [".cursor/rules/test.mdc"],
-          "marketplace" => "https://github.com/anthropics/skills",
+      project_config = load_project_config
+      project_config["plugins"] = {
+        "test-plugin@skills" => {
+          "marketplace" => "skills",
           "custom_field" => "custom_value"
         }
       }
-      File.write(manifest_file, JSON.pretty_generate(manifest))
-      manifest_before = load_manifest
+      File.write(config_file, JSON.pretty_generate(project_config))
+      
+      # Force failure by corrupting marketplace URL temporarily
+      project_config["marketplaces"]["skills"]["url"] = "https://invalid-url"
+      File.write(config_file, JSON.pretty_generate(project_config))
 
-      run_command("caruso plugin update test-plugin")
+      run_command("caruso plugin update test-plugin@skills")
 
       # If update fails, original data should be preserved
-      manifest_after = load_manifest
-      if manifest_after["plugins"]["test-plugin"]["installed_at"] == "2025-01-01T00:00:00Z"
-        # Update failed, verify data unchanged
-        expect(manifest_after["plugins"]["test-plugin"]).to include("custom_field" => "custom_value")
-      end
-    end
-
-    it "handles updates with file system operations", :live do
-      skip "This test requires real plugin that can be fetched"
-
-      # This test documents expected behavior for concurrent operations:
-      # - Manifest updates should be atomic
-      # - File writes should be transactional where possible
-      # - Errors in one plugin update shouldn't corrupt manifest
-      #
-      # In practice, this is handled by:
-      # 1. Writing files first
-      # 2. Updating manifest only after successful file writes
-      # 3. Using JSON pretty_generate for clean writes
+      config_after = load_project_config
+      expect(config_after["plugins"]["test-plugin@skills"]).to include("custom_field" => "custom_value")
     end
   end
 end

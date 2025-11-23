@@ -85,28 +85,25 @@ Caruso follows a three-stage pipeline for plugin management:
 
 1. **Fetch** (`Fetcher`) - Clones Git repositories, resolves marketplace.json, finds plugin markdown files
 2. **Adapt** (`Adapter`) - Converts Claude Code markdown to target IDE format with metadata injection
-3. **Track** (`ManifestManager`) - Records installations in target IDE's caruso.json manifest
+3. **Track** (`ConfigManager`) - Records installations in `caruso.json` and `.caruso.local.json`
 
 ### Key Components
 
 #### ConfigManager (`lib/caruso/config_manager.rb`)
-Manages `.caruso.json` in project root. Contains:
+Manages configuration and state. Splits data between:
+
+**1. Project Config (`caruso.json`)**
 - `ide`: Target IDE (currently only "cursor" supported)
 - `target_dir`: Where to write converted files (`.cursor/rules` for Cursor)
-- `initialized_at`: ISO8601 timestamp
+- `marketplaces`: Name → URL mapping
+- `plugins`: Name → metadata (marketplace source)
 - `version`: Config schema version
 
-Must run `caruso init --ide=cursor` before other commands. ConfigManager validates IDE support and prevents double-initialization.
+**2. Local Config (`.caruso.local.json`)**
+- `installed_files`: Plugin Name → Array of file paths
+- `initialized_at`: Timestamp
 
-#### ManifestManager (`lib/caruso/manifest_manager.rb`)
-Manages `caruso.json` in target IDE directory (e.g., `.cursor/rules/caruso.json`). Contains:
-- `marketplaces`: Name → URL mapping of added marketplaces
-- `plugins`: Name → metadata mapping of installed plugins
-  - `installed_at`: ISO8601 timestamp
-  - `files`: Array of relative file paths (e.g., `[".cursor/rules/document-skills.mdc"]`)
-  - `marketplace`: Source marketplace URL
-
-This manifest tracks what's installed and where it came from. Used for uninstall, update, and status tracking.
+Must run `caruso init --ide=cursor` before other commands. ConfigManager handles loading/saving both files and ensures `.caruso.local.json` is gitignored.
 
 #### MarketplaceRegistry (`lib/caruso/marketplace_registry.rb`)
 Manages persistent marketplace metadata registry at `~/.caruso/known_marketplaces.json`. Contains:
@@ -184,7 +181,7 @@ Thor-based CLI with nested commands:
 - `caruso plugin install|uninstall|list|update|outdated`
 
 **Important patterns:**
-- All commands except `init` require existing `.caruso.json` (enforced by `load_config` helper)
+- All commands except `init` require existing `caruso.json` (enforced by `load_config` helper)
 - Plugin install format: `plugin@marketplace` or just `plugin` (if only one marketplace configured)
 - Update commands refresh marketplace cache (git pull) before fetching latest plugin files
 - Marketplace add eagerly clones repos unless `CARUSO_TESTING_SKIP_CLONE` env var is set (used in tests)
@@ -194,16 +191,16 @@ Thor-based CLI with nested commands:
 
 User runs: `caruso plugin install document-skills@skills`
 
-1. **CLI** parses command, loads config from `.caruso.json`
-2. **ManifestManager** looks up marketplace "skills" URL from `.cursor/rules/caruso.json`
+1. **CLI** parses command, loads config from `caruso.json`
+2. **ConfigManager** looks up marketplace "skills" URL
 3. **Fetcher** clones/updates marketplace repo to `~/.caruso/marketplaces/skills/`
 4. **Fetcher** registers/updates marketplace metadata in MarketplaceRegistry
 5. **Fetcher** reads `marketplace.json`, finds document-skills plugin
 6. **Fetcher** scans standard directories + custom paths from `skills: [...]` array
 7. **Fetcher** returns list of `.md` file paths
-8. **Adapter** converts each file: adds frontmatter, renames to `.mdc`, writes to `.cursor/rules/`
+8. **Adapter** converts each file: adds frontmatter, renames to `.mdc`, writes to `.cursor/rules/caruso/`
 9. **Adapter** returns created filenames
-10. **ManifestManager** records plugin in manifest with file list and marketplace URL
+10. **ConfigManager** records plugin in `caruso.json` and files in `.caruso.local.json`
 11. **CLI** prints success message
 
 ### Testing Architecture
@@ -275,3 +272,4 @@ Version is managed in `lib/caruso/version.rb`.
 
 # Memory
 - The goal is a clean, correct, consistent implementation. Never implement fallbacks that hide errors or engage in defensive programming.
+- Treat the vendor directory .cursor/rules/caruso/ as a build artifact

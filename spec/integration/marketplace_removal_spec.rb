@@ -9,17 +9,17 @@ RSpec.describe "Marketplace Removal", type: :integration do
 
   describe "caruso marketplace remove" do
     context "when marketplace exists" do
-      it "removes marketplace from manifest" do
-        add_marketplace("https://github.com/anthropics/skills")
+      it "removes marketplace from config" do
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         # Verify it was added
-        expect(load_manifest["marketplaces"]).to have_key("skills")
+        expect(load_project_config["marketplaces"]).to have_key("skills")
 
         run_command("caruso marketplace remove skills")
 
         expect(last_command_started).to be_successfully_executed
-        manifest = load_manifest
-        expect(manifest["marketplaces"]).not_to have_key("skills")
+        config = load_project_config
+        expect(config["marketplaces"]).not_to have_key("skills")
       end
 
       it "shows confirmation message" do
@@ -36,38 +36,36 @@ RSpec.describe "Marketplace Removal", type: :integration do
         add_marketplace("https://github.com/example/third", "marketplace-3")
 
         # Verify all were added
-        manifest_before = load_manifest
-        expect(manifest_before["marketplaces"].keys).to include("marketplace-1", "marketplace-2", "marketplace-3")
+        config_before = load_project_config
+        expect(config_before["marketplaces"].keys).to include("marketplace-1", "marketplace-2", "marketplace-3")
 
         run_command("caruso marketplace remove marketplace-2")
 
         expect(last_command_started).to be_successfully_executed
 
-        manifest = load_manifest
-        expect(manifest["marketplaces"]).to have_key("marketplace-1")
-        expect(manifest["marketplaces"]).not_to have_key("marketplace-2")
-        expect(manifest["marketplaces"]).to have_key("marketplace-3")
+        config = load_project_config
+        expect(config["marketplaces"]).to have_key("marketplace-1")
+        expect(config["marketplaces"]).not_to have_key("marketplace-2")
+        expect(config["marketplaces"]).to have_key("marketplace-3")
       end
 
       it "does not affect plugins section when removing marketplace" do
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         # Simulate having a plugin installed
-        manifest = load_manifest
-        manifest["plugins"] = {
-          "test-plugin" => {
-            "installed_at" => Time.now.iso8601,
-            "files" => [".cursor/rules/test.mdc"],
-            "marketplace" => "https://github.com/anthropics/skills"
+        project_config = load_project_config
+        project_config["plugins"] = {
+          "test-plugin@skills" => {
+            "marketplace" => "skills"
           }
         }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        File.write(config_file, JSON.pretty_generate(project_config))
 
         run_command("caruso marketplace remove skills")
 
-        updated_manifest = load_manifest
-        expect(updated_manifest["plugins"]).to have_key("test-plugin")
-        expect(updated_manifest["plugins"]["test-plugin"]["marketplace"]).to eq("https://github.com/anthropics/skills")
+        updated_config = load_project_config
+        expect(updated_config["plugins"]).to have_key("test-plugin@skills")
+        expect(updated_config["plugins"]["test-plugin@skills"]["marketplace"]).to eq("skills")
       end
     end
 
@@ -78,47 +76,47 @@ RSpec.describe "Marketplace Removal", type: :integration do
         expect(last_command_started).to be_successfully_executed
       end
 
-      it "does not modify manifest when removing non-existent marketplace" do
-        add_marketplace("https://github.com/anthropics/skills")
+      it "does not modify config when removing non-existent marketplace" do
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
-        manifest_before = load_manifest
+        config_before = load_project_config
         run_command("caruso marketplace remove nonexistent")
-        manifest_after = load_manifest
+        config_after = load_project_config
 
-        expect(manifest_after).to eq(manifest_before)
+        expect(config_after).to eq(config_before)
       end
     end
 
     context "when removing last marketplace" do
       it "leaves empty marketplaces hash" do
-        add_marketplace("https://github.com/anthropics/skills")
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         # Verify it was added
-        expect(load_manifest["marketplaces"]).to have_key("skills")
+        expect(load_project_config["marketplaces"]).to have_key("skills")
 
         run_command("caruso marketplace remove skills")
 
         expect(last_command_started).to be_successfully_executed
 
-        manifest = load_manifest
-        expect(manifest["marketplaces"]).to be_a(Hash)
-        expect(manifest["marketplaces"]).to be_empty
+        config = load_project_config
+        expect(config["marketplaces"]).to be_a(Hash)
+        expect(config["marketplaces"]).to be_empty
       end
 
-      it "maintains manifest structure with other sections" do
-        add_marketplace("https://github.com/anthropics/skills")
+      it "maintains config structure with other sections" do
+        add_marketplace("https://github.com/anthropics/skills", "skills")
 
         # Add a plugin to ensure other sections remain
-        manifest = load_manifest
-        manifest["plugins"] = { "test" => { "installed_at" => Time.now.iso8601 } }
-        File.write(manifest_file, JSON.pretty_generate(manifest))
+        project_config = load_project_config
+        project_config["plugins"] = { "test@skills" => { "marketplace" => "skills" } }
+        File.write(config_file, JSON.pretty_generate(project_config))
 
         run_command("caruso marketplace remove skills")
 
-        updated_manifest = load_manifest
-        expect(updated_manifest).to have_key("marketplaces")
-        expect(updated_manifest).to have_key("plugins")
-        expect(updated_manifest["plugins"]).to have_key("test")
+        updated_config = load_project_config
+        expect(updated_config).to have_key("marketplaces")
+        expect(updated_config).to have_key("plugins")
+        expect(updated_config["plugins"]).to have_key("test@skills")
       end
     end
 
@@ -135,7 +133,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
         add_marketplace("https://github.com/example/other", "marketplace-2")
 
         # Verify both were added
-        expect(load_manifest["marketplaces"].keys).to include("marketplace-1", "marketplace-2")
+        expect(load_project_config["marketplaces"].keys).to include("marketplace-1", "marketplace-2")
 
         run_command("caruso marketplace remove marketplace-2")
 
@@ -150,16 +148,16 @@ RSpec.describe "Marketplace Removal", type: :integration do
   end
 
   describe "marketplace removal edge cases" do
-    it "handles removal from manifest with no marketplaces section" do
+    it "handles removal from config with no marketplaces section" do
       # Start fresh without adding any marketplaces
-      # The manifest will have no marketplaces section
+      # The config will have empty marketplaces section by default from init
       run_command("caruso marketplace remove any-name")
 
       expect(last_command_started).to be_successfully_executed
     end
 
     it "handles removal with corrupted marketplace name" do
-      add_marketplace("https://github.com/anthropics/skills")
+      add_marketplace("https://github.com/anthropics/skills", "skills")
 
       run_command("caruso marketplace remove 'name with spaces'")
 
@@ -172,8 +170,8 @@ RSpec.describe "Marketplace Removal", type: :integration do
 
       run_command("caruso marketplace remove marketplace-1")
 
-      manifest = load_manifest
-      expect(manifest["marketplaces"]["marketplace-2"]).to eq("https://github.com/example/plugins.git")
+      config = load_project_config
+      expect(config["marketplaces"]["marketplace-2"]["url"]).to eq("https://github.com/example/plugins.git")
     end
   end
 end

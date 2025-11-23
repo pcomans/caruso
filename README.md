@@ -11,7 +11,7 @@ Enable Cursor to consume Claude Code plugins from marketplaces by converting the
 *   **One-time Configuration**: Initialize once with `caruso init --ide=cursor` and all commands automatically use the right settings.
 *   **Universal Fetcher**: Downloads plugins from local paths, HTTP URLs, or GitHub repositories.
 *   **Smart Adapter**: Automatically converts Claude Plugin Markdown files into **Cursor Rules** (`.mdc`), injecting necessary metadata (`globs: []`, `alwaysApply: false`) to ensure they work out of the box.
-*   **Package Manager**: Install, uninstall, and list plugins selectively. Tracks configuration in `.caruso.json` and installed plugins in `.cursor/rules/caruso.json`.
+*   **Package Manager**: Install, uninstall, and list plugins selectively. Tracks project configuration in `caruso.json` and local state in `.caruso.local.json`.
 
 ## Installation
 
@@ -51,10 +51,10 @@ cd /path/to/your/project
 caruso init --ide=cursor
 ```
 
-This creates a `.caruso.json` config file that stores your IDE preference and target directory. You only need to do this once per project.
+This creates a `caruso.json` config file for project settings and `.caruso.local.json` for local state. You only need to do this once per project.
 
 **What happens during init:**
-- Creates `.caruso.json` in your project root
+- Creates `caruso.json` and `.caruso.local.json` in your project root
 - Configures target directory (`.cursor/rules` for Cursor)
 - All subsequent commands automatically use this configuration
 
@@ -137,8 +137,8 @@ caruso plugin install frontend-design
 2. Scans `commands/`, `agents/`, and `skills/` directories
 3. Converts Claude Plugin Markdown to Cursor Rules (`.mdc` format)
 4. Injects Cursor-specific metadata (`globs: []`, `alwaysApply: false`)
-5. Saves converted files to `.cursor/rules/`
-6. Updates `.cursor/rules/caruso.json` manifest
+5. Saves converted files to `.cursor/rules/caruso/` (vendor directory)
+6. Updates `.caruso.local.json` with installed file list
 
 #### Uninstall a plugin
 
@@ -166,7 +166,8 @@ caruso plugin list
 caruso plugin install frontend-design@claude-code
 
 # 5. Your Cursor rules are now updated!
-# Files are in .cursor/rules/ and tracked in .cursor/rules/caruso.json
+# 5. Your Cursor rules are now updated!
+# Files are in .cursor/rules/caruso/ and tracked in .caruso.local.json
 ```
 
 ## CLI Reference
@@ -177,7 +178,7 @@ caruso plugin install frontend-design@claude-code
 caruso init [PATH] --ide=IDE
 ```
 
-Initialize Caruso in a directory. Creates `.caruso.json` configuration file.
+Initialize Caruso in a directory. Creates `caruso.json` and `.caruso.local.json`.
 
 **Arguments:**
 - `PATH` - Project directory (optional, defaults to current directory)
@@ -216,11 +217,11 @@ caruso version                         # Print Caruso version
 
 ## How it works
 
-1.  **Init**: Creates `.caruso.json` config with IDE-specific settings (one-time setup)
+1.  **Init**: Creates `caruso.json` and `.caruso.local.json` (one-time setup)
 2.  **Fetch**: Resolves marketplace URI and clones Git repositories if needed
 3.  **Scan**: Finds "steering files" in `commands/`, `agents/`, and `skills/` directories
 4.  **Adapt**: Converts Claude Plugin Markdown to Cursor Rules (`.mdc`) with metadata injection
-5.  **Manage**: Tracks installations in `.cursor/rules/caruso.json` manifest
+5.  **Manage**: Tracks installations in `.caruso.local.json` and project plugins in `caruso.json`
 
 ## Development
 

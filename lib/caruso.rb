@@ -5,7 +5,7 @@ require_relative "caruso/config_manager"
 require_relative "caruso/fetcher"
 require_relative "caruso/adapter"
 require_relative "caruso/marketplace_registry"
-require_relative "caruso/manifest_manager"
+
 require_relative "caruso/cli"
 
 module Caruso

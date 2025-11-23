@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2025-11-22
+
+### Changed
+- **BREAKING**: Refactored state management to use centralized `ConfigManager`
+- **BREAKING**: Split configuration into `caruso.json` (project settings) and `.caruso.local.json` (local state)
+- **BREAKING**: Plugins now installed to `.cursor/rules/caruso/` vendor directory
+- **BREAKING**: Removed `ManifestManager` class and `.cursor/rules/caruso.json` manifest file
+- Updated `init` command to create both config files and add local config to `.gitignore`
+- Updated plugin installation to use composite keys (`plugin@marketplace`) for uniqueness
+- Improved `uninstall` command to rely on strict file tracking in `.caruso.local.json`
+
+### Added
+- Vendor directory strategy for better separation of managed vs user files
+- Deterministic file tracking for robust uninstalls
+- Support for multiple marketplaces with same plugin names via composite keys
+
 ## [0.2.0] - 2025-11-22
 
 ### Added
