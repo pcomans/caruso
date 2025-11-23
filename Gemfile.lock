@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    caruso (0.2.0)
+    caruso (0.3.0)
       faraday (~> 2.0)
       git (~> 1.19)
       thor (~> 1.3)
