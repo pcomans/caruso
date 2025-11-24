@@ -15,24 +15,27 @@ Enable Cursor to consume Claude Code plugins from marketplaces by converting the
 
 ## Installation
 
-### Option 1: Install from Source (Recommended)
+### Install from RubyGems
 
-Clone the repository and build the gem:
+```bash
+gem install caruso
+```
+
+Verify the installation:
+
+```bash
+caruso version
+```
+
+### Install from Source (Development)
+
+For development or testing unreleased features:
 
 ```bash
 git clone https://github.com/pcomans/caruso.git
 cd caruso
 gem build caruso.gemspec
 gem install caruso-*.gem
-```
-
-### Option 2: Using `specific_install`
-
-If you have the `specific_install` gem, you can install directly from GitHub:
-
-```bash
-gem install specific_install
-gem specific_install -l https://github.com/pcomans/caruso.git
 ```
 
 ## Usage
