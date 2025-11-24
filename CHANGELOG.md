@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-11-24
+
+### Security
+- **CRITICAL**: Addressed "Uncontrolled data used in path expression" vulnerabilities (CodeQL)
+- Introduced `Caruso::SafeFile` for secure file reading with strict path sanitization
+- Introduced `Caruso::SafeDir` for secure directory operations (globbing, existence checks)
+- Replaced all vulnerable `File` and `Dir` calls in `Adapter` and `Fetcher` with safe alternatives
+- Removed redundant string-based path validation in favor of robust `Pathname` canonicalization
+
+### Changed
+- `Adapter` now strictly validates file existence and raises errors instead of silently skipping invalid files
+- `Fetcher` now filters glob results to ensure they remain within trusted plugin directories
+
 ## [0.5.3] - 2025-11-23
 
 ### Changed

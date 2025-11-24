@@ -55,25 +55,5 @@ module Caruso
       # Validate the result stays within base
       sanitize_path(joined, base_dir: base)
     end
-
-    # Validates a relative path component (like a plugin source path)
-    # Ensures it doesn't start with / or contain ..
-    #
-    # @param path [String] The relative path to validate
-    # @return [String] The validated path
-    # @raise [PathTraversalError] if path is invalid
-    def self.validate_relative_path(path)
-      return nil if path.nil? || path.empty?
-
-      if path.start_with?("/")
-        raise PathTraversalError, "Relative path cannot be absolute: #{path}"
-      end
-
-      if path.include?("..")
-        raise PathTraversalError, "Relative path contains traversal sequence: #{path}"
-      end
-
-      path
-    end
   end
 end

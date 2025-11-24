@@ -5,6 +5,8 @@ require "faraday"
 require "fileutils"
 require "uri"
 require "git"
+require_relative "safe_file"
+require_relative "safe_dir"
 require_relative "path_sanitizer"
 
 module Caruso
@@ -50,7 +52,7 @@ module Caruso
     end
 
     def update_cache
-      return unless Dir.exist?(cache_dir)
+      return unless SafeDir.exist?(cache_dir)
 
       Dir.chdir(cache_dir) do
         git = Git.open(".")
@@ -73,7 +75,7 @@ module Caruso
       URI.parse(url).path.split("/").last.sub(".git", "")
       target_path = cache_dir
 
-      unless Dir.exist?(target_path)
+      unless SafeDir.exist?(target_path)
         # Clone the repository
         FileUtils.mkdir_p(File.dirname(target_path))
         Git.clone(url, target_path)
@@ -106,7 +108,7 @@ module Caruso
     def load_marketplace
       if local_path?
         # If marketplace_uri is a directory, find marketplace.json in it
-        if File.directory?(@marketplace_uri)
+        if SafeDir.exist?(@marketplace_uri)
           json_path = File.join(@marketplace_uri, ".claude-plugin", "marketplace.json")
           json_path = File.join(@marketplace_uri, "marketplace.json") unless File.exist?(json_path)
 
@@ -123,7 +125,7 @@ module Caruso
           @base_dir = File.dirname(@base_dir)
         end
 
-        JSON.parse(File.read(@marketplace_uri))
+        JSON.parse(SafeFile.read(@marketplace_uri))
       elsif github_repo?
         # Clone repo and read marketplace.json from it
         repo_path = clone_git_repo("url" => @marketplace_uri, "source" => "github")
@@ -139,7 +141,7 @@ module Caruso
         @marketplace_uri = json_path
         @base_dir = repo_path # Base dir is the repo root, regardless of where json is
 
-        JSON.parse(File.read(json_path))
+        JSON.parse(SafeFile.read(json_path))
       else
         response = Faraday.get(@marketplace_uri)
         JSON.parse(response.body)
@@ -176,7 +178,7 @@ module Caruso
         return []
       end
 
-      return [] unless Dir.exist?(plugin_path)
+      return [] unless SafeDir.exist?(plugin_path)
 
       # Start with default directories
       files = find_steering_files(plugin_path)
@@ -214,7 +216,7 @@ module Caruso
       # (either from cache_dir which is under ~/.caruso, or validated local paths)
       glob_pattern = PathSanitizer.safe_join(plugin_path, "{commands,agents,skills}", "**", "*.md")
 
-      Dir.glob(glob_pattern).reject do |file|
+      SafeDir.glob(glob_pattern, base_dir: plugin_path).reject do |file|
         basename = File.basename(file).downcase
         ["readme.md", "license.md"].include?(basename)
       end
@@ -227,14 +229,6 @@ module Caruso
 
       files = []
       paths.each do |path|
-        # Validate that path is a safe relative path (no absolute paths or traversal)
-        begin
-          PathSanitizer.validate_relative_path(path)
-        rescue PathSanitizer::PathTraversalError => e
-          warn "Skipping invalid path '#{path}': #{e.message}"
-          next
-        end
-
         # Resolve and sanitize the path relative to plugin_path
         # This ensures the path stays within plugin_path boundaries
         begin
@@ -248,10 +242,10 @@ module Caruso
         if File.file?(full_path) && full_path.end_with?(".md")
           basename = File.basename(full_path).downcase
           files << full_path unless ["readme.md", "license.md"].include?(basename)
-        elsif Dir.exist?(full_path)
-          # Find all .md files in this directory using safe_join
-          glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
-          Dir.glob(glob_pattern).each do |file|
+          elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+            # Find all .md files in this directory using safe_join
+            glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
+            SafeDir.glob(glob_pattern, base_dir: plugin_path).each do |file|
             basename = File.basename(file).downcase
             files << file unless ["readme.md", "license.md"].include?(basename)
           end

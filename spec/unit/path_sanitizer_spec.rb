@@ -136,47 +136,6 @@ RSpec.describe Caruso::PathSanitizer do
     end
   end
 
-  describe ".validate_relative_path" do
-    it "accepts valid relative paths" do
-      expect(described_class.validate_relative_path("subdir/file.txt")).to eq("subdir/file.txt")
-    end
-
-    it "accepts paths starting with ./" do
-      expect(described_class.validate_relative_path("./subdir/file.txt")).to eq("./subdir/file.txt")
-    end
-
-    it "rejects absolute paths" do
-      expect do
-        described_class.validate_relative_path("/etc/passwd")
-      end.to raise_error(Caruso::PathSanitizer::PathTraversalError, /cannot be absolute/)
-    end
-
-    it "rejects paths with .. traversal" do
-      expect do
-        described_class.validate_relative_path("../etc/passwd")
-      end.to raise_error(Caruso::PathSanitizer::PathTraversalError, /traversal sequence/)
-    end
-
-    it "rejects paths with embedded .." do
-      expect do
-        described_class.validate_relative_path("subdir/../../../etc/passwd")
-      end.to raise_error(Caruso::PathSanitizer::PathTraversalError, /traversal sequence/)
-    end
-
-    it "returns nil for nil input" do
-      expect(described_class.validate_relative_path(nil)).to be_nil
-    end
-
-    it "returns nil for empty string" do
-      expect(described_class.validate_relative_path("")).to be_nil
-    end
-
-    it "accepts deeply nested relative paths" do
-      path = "a/b/c/d/e/file.txt"
-      expect(described_class.validate_relative_path(path)).to eq(path)
-    end
-  end
-
   describe "edge cases" do
     it "handles Unicode characters in paths" do
       unicode_path = File.join(temp_dir, "文件.txt")
@@ -202,30 +161,6 @@ RSpec.describe Caruso::PathSanitizer do
     it "blocks classic path traversal" do
       expect do
         described_class.safe_join(temp_dir, "../../../etc/passwd")
-      end.to raise_error(Caruso::PathSanitizer::PathTraversalError)
-    end
-
-    it "blocks URL-encoded traversal" do
-      # While this specific encoding won't work in Ruby File operations,
-      # we still validate the raw input
-      expect do
-        described_class.validate_relative_path("..%2F..%2Fetc%2Fpasswd")
-      end.to raise_error(Caruso::PathSanitizer::PathTraversalError)
-    end
-
-    it "blocks null byte injection attempts" do
-      # Null bytes in paths should be caught by Ruby itself,
-      # but our validation adds an extra layer
-      path_with_null = "file.txt\x00.md"
-      # Ruby will handle this, our sanitizer focuses on traversal
-      expect do
-        described_class.validate_relative_path(path_with_null)
-      end.not_to raise_error
-    end
-
-    it "blocks mixed slash types on Windows-like paths" do
-      expect do
-        described_class.validate_relative_path("..\\..\\windows\\system32")
       end.to raise_error(Caruso::PathSanitizer::PathTraversalError)
     end
   end

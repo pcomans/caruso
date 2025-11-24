@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require_relative "caruso/safe_file"
+require_relative "caruso/safe_dir"
 require_relative "caruso/version"
 require_relative "caruso/config_manager"
 require_relative "caruso/fetcher"

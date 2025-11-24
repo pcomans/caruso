@@ -2,6 +2,7 @@
 
 require "fileutils"
 require "yaml"
+require_relative "safe_file"
 require_relative "path_sanitizer"
 
 module Caruso
@@ -20,17 +21,7 @@ module Caruso
     def adapt
       created_files = []
       files.each do |file_path|
-        # Validate file_path before reading
-        # Files should come from trusted sources (fetcher returns paths from cache or validated local dirs)
-        # However, we validate to ensure they're legitimate markdown files
-        next unless valid_file_path?(file_path)
-
-        begin
-          content = File.read(file_path)
-        rescue Errno::ENOENT => e
-          warn "Skipping non-existent file '#{file_path}': #{e.message}"
-          next
-        end
+        content = SafeFile.read(file_path)
 
         adapted_content = inject_metadata(content, file_path)
         created_file = save_file(file_path, adapted_content)
@@ -40,57 +31,6 @@ module Caruso
     end
 
     private
-
-    def valid_file_path?(file_path)
-      unless regular_file?(file_path)
-        warn "Skipping invalid file path '#{file_path}': Not a regular file"
-        return false
-      end
-
-      unless markdown_file?(file_path)
-        warn "Skipping invalid file path '#{file_path}': Not a markdown file"
-        return false
-      end
-
-      unless safe_path?(file_path)
-        warn "Skipping invalid file path '#{file_path}': Path traversal detected or invalid path"
-        return false
-      end
-
-      true
-    end
-
-    def regular_file?(file_path)
-      File.file?(file_path)
-    end
-
-    def markdown_file?(file_path)
-      file_path.end_with?(".md")
-    end
-
-    def safe_path?(file_path)
-      # Validate against expected source directories
-      # Files should come from either ~/.caruso cache or validated local paths
-      caruso_cache = File.join(Dir.home, ".caruso")
-
-      # Check if path is within a trusted location
-      expanded_path = File.expand_path(file_path)
-      is_in_cache = expanded_path.start_with?(caruso_cache)
-
-      # For cache paths, validate they're within the cache directory
-      if is_in_cache
-        begin
-          PathSanitizer.sanitize_path(expanded_path, base_dir: caruso_cache)
-        rescue PathSanitizer::PathTraversalError
-          return false
-        end
-      end
-
-      # If not in cache, it's a local file that was validated by the fetcher
-      # We still check it's a real file (done above) but allow it through
-
-      true
-    end
 
     def inject_metadata(content, file_path)
       # Check if frontmatter exists
