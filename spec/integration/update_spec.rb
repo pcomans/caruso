@@ -16,7 +16,7 @@ RSpec.describe "Update Functionality", type: :integration do
       it "updates a specific marketplace", :live do
         skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
-        run_command("caruso marketplace update skills")
+        run_command("caruso marketplace update test-skills")
 
         expect(last_command_started).to be_successfully_executed
         expect(last_command_started).to have_output(/Updated marketplace 'test-skills'/)
