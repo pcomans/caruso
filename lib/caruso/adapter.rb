@@ -23,12 +23,10 @@ module Caruso
         # Validate file_path before reading
         # Files should come from trusted sources (fetcher returns paths from cache or validated local dirs)
         # However, we validate to ensure they're legitimate markdown files
+        next unless valid_file_path?(file_path)
+
         begin
-          validate_file_path(file_path)
           content = File.read(file_path)
-        rescue PathSanitizer::PathTraversalError => e
-          warn "Skipping invalid file path '#{file_path}': #{e.message}"
-          next
         rescue Errno::ENOENT => e
           warn "Skipping non-existent file '#{file_path}': #{e.message}"
           next
@@ -43,17 +41,34 @@ module Caruso
 
     private
 
-    def validate_file_path(file_path)
-      # Ensure the file exists and is a regular file
-      unless File.file?(file_path)
-        raise PathSanitizer::PathTraversalError, "Not a regular file: #{file_path}"
+    def valid_file_path?(file_path)
+      unless regular_file?(file_path)
+        warn "Skipping invalid file path '#{file_path}': Not a regular file"
+        return false
       end
 
-      # Ensure it's a markdown file
-      unless file_path.end_with?(".md")
-        raise PathSanitizer::PathTraversalError, "Not a markdown file: #{file_path}"
+      unless markdown_file?(file_path)
+        warn "Skipping invalid file path '#{file_path}': Not a markdown file"
+        return false
       end
 
+      unless safe_path?(file_path)
+        warn "Skipping invalid file path '#{file_path}': Path traversal detected or invalid path"
+        return false
+      end
+
+      true
+    end
+
+    def regular_file?(file_path)
+      File.file?(file_path)
+    end
+
+    def markdown_file?(file_path)
+      file_path.end_with?(".md")
+    end
+
+    def safe_path?(file_path)
       # Validate against expected source directories
       # Files should come from either ~/.caruso cache or validated local paths
       caruso_cache = File.join(Dir.home, ".caruso")
@@ -64,7 +79,11 @@ module Caruso
 
       # For cache paths, validate they're within the cache directory
       if is_in_cache
-        PathSanitizer.sanitize_path(expanded_path, base_dir: caruso_cache)
+        begin
+          PathSanitizer.sanitize_path(expanded_path, base_dir: caruso_cache)
+        rescue PathSanitizer::PathTraversalError
+          return false
+        end
       end
 
       # If not in cache, it's a local file that was validated by the fetcher
