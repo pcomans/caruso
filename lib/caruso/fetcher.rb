@@ -242,10 +242,10 @@ module Caruso
         if File.file?(full_path) && full_path.end_with?(".md")
           basename = File.basename(full_path).downcase
           files << full_path unless ["readme.md", "license.md"].include?(basename)
-          elsif SafeDir.exist?(full_path, base_dir: plugin_path)
-            # Find all .md files in this directory using safe_join
-            glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
-            SafeDir.glob(glob_pattern, base_dir: plugin_path).each do |file|
+        elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+          # Find all .md files in this directory using safe_join
+          glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
+          SafeDir.glob(glob_pattern, base_dir: plugin_path).each do |file|
             basename = File.basename(file).downcase
             files << file unless ["readme.md", "license.md"].include?(basename)
           end

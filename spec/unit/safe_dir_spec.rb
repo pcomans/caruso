@@ -45,10 +45,10 @@ RSpec.describe Caruso::SafeDir do
     it "filters out results outside base_dir" do
       # Create a symlink pointing outside if possible, or just test logic
       # Simpler: pass a pattern that finds things outside, and ensure they are filtered
-      
+
       # We'll mock Dir.glob to return an unsafe path
       allow(Dir).to receive(:glob).and_return(["/etc/passwd", File.join(subdir, "test.md")])
-      
+
       results = described_class.glob("*", base_dir: temp_dir)
       expect(results).to include(File.join(subdir, "test.md"))
       expect(results).not_to include("/etc/passwd")
