@@ -20,7 +20,9 @@ module Caruso
       fetcher = Caruso::Fetcher.new(url, ref: options[:ref])
 
       # For Git repos, clone/update the cache (skip in test mode to allow fake URLs)
-      if (source == "github" || url.match?(/\Ahttps?:/) || url.match?(%r{[^/]+/[^/]+})) && !ENV["CARUSO_TESTING_SKIP_CLONE"]
+      # Fixed ReDoS: Use anchored regex and limit input length to prevent catastrophic backtracking
+      is_owner_repo = url.length < 256 && url.match?(%r{\A[^/]+/[^/]+\z})
+      if (source == "github" || url.match?(/\Ahttps?:/) || is_owner_repo) && !ENV["CARUSO_TESTING_SKIP_CLONE"]
         fetcher.clone_git_repo({ "url" => url, "source" => source })
       end
 

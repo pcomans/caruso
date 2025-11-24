@@ -5,6 +5,7 @@ require "faraday"
 require "fileutils"
 require "uri"
 require "git"
+require_relative "path_sanitizer"
 
 module Caruso
   class Fetcher
@@ -146,6 +147,10 @@ module Caruso
     end
 
     def github_repo?
+      # Fixed ReDoS: Add length check to prevent catastrophic backtracking
+      # GitHub URLs and owner/repo format should be reasonably short
+      return false if @marketplace_uri.length > 512
+
       @marketplace_uri.match?(%r{\Ahttps://github\.com/[^/]+/[^/]+}) ||
         @marketplace_uri.match?(%r{\A[^/]+/[^/]+\z}) # owner/repo format
     end
@@ -153,7 +158,25 @@ module Caruso
     def fetch_plugin(plugin)
       source = plugin["source"]
       plugin_path = resolve_plugin_path(source)
-      return [] unless plugin_path && Dir.exist?(plugin_path)
+      return [] unless plugin_path
+
+      # Validate that plugin_path is safe before using it
+      # resolve_plugin_path returns paths from trusted sources:
+      # - cache_dir (under ~/.caruso/marketplaces/)
+      # - validated local paths relative to @base_dir
+      # However, we still validate to ensure no path traversal
+      begin
+        # For paths under ~/.caruso, validate against home directory
+        # For local paths, they're already validated in resolve_plugin_path
+        if plugin_path.start_with?(File.join(Dir.home, ".caruso"))
+          PathSanitizer.sanitize_path(plugin_path, base_dir: File.join(Dir.home, ".caruso"))
+        end
+      rescue PathSanitizer::PathTraversalError => e
+        warn "Invalid plugin path '#{plugin_path}': #{e.message}"
+        return []
+      end
+
+      return [] unless Dir.exist?(plugin_path)
 
       # Start with default directories
       files = find_steering_files(plugin_path)
@@ -186,7 +209,12 @@ module Caruso
     end
 
     def find_steering_files(plugin_path)
-      Dir.glob(File.join(plugin_path, "{commands,agents,skills}/**/*.md")).reject do |file|
+      # Validate plugin_path before using it in glob
+      # This is safe because plugin_path comes from resolve_plugin_path which returns trusted paths
+      # (either from cache_dir which is under ~/.caruso, or validated local paths)
+      glob_pattern = PathSanitizer.safe_join(plugin_path, "{commands,agents,skills}", "**", "*.md")
+
+      Dir.glob(glob_pattern).reject do |file|
         basename = File.basename(file).downcase
         ["readme.md", "license.md"].include?(basename)
       end
@@ -199,16 +227,31 @@ module Caruso
 
       files = []
       paths.each do |path|
-        # Resolve the path relative to plugin_path
-        full_path = File.expand_path(path, plugin_path)
+        # Validate that path is a safe relative path (no absolute paths or traversal)
+        begin
+          PathSanitizer.validate_relative_path(path)
+        rescue PathSanitizer::PathTraversalError => e
+          warn "Skipping invalid path '#{path}': #{e.message}"
+          next
+        end
+
+        # Resolve and sanitize the path relative to plugin_path
+        # This ensures the path stays within plugin_path boundaries
+        begin
+          full_path = PathSanitizer.sanitize_path(File.expand_path(path, plugin_path), base_dir: plugin_path)
+        rescue PathSanitizer::PathTraversalError => e
+          warn "Skipping path outside plugin directory '#{path}': #{e.message}"
+          next
+        end
 
         # Handle both files and directories
         if File.file?(full_path) && full_path.end_with?(".md")
           basename = File.basename(full_path).downcase
           files << full_path unless ["readme.md", "license.md"].include?(basename)
         elsif Dir.exist?(full_path)
-          # Find all .md files in this directory
-          Dir.glob(File.join(full_path, "**/*.md")).each do |file|
+          # Find all .md files in this directory using safe_join
+          glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
+          Dir.glob(glob_pattern).each do |file|
             basename = File.basename(file).downcase
             files << file unless ["readme.md", "license.md"].include?(basename)
           end
