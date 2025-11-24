@@ -19,13 +19,11 @@ Please do not report security vulnerabilities through public GitHub issues, disc
 
 ### 2. Report Privately
 
-Instead, please report security vulnerabilities by emailing:
+Please report security vulnerabilities using GitHub's private vulnerability reporting:
 
-**[Your Email Address]** *(Replace this with your actual security contact email)*
-
-Or use GitHub's private vulnerability reporting:
 - Go to the [Security tab](https://github.com/pcomans/caruso/security)
 - Click "Report a vulnerability"
+- Fill out the form with details about the vulnerability
 
 ### 3. Include Details
 
