@@ -13,7 +13,7 @@ RSpec.describe Caruso::PathSanitizer do
   end
 
   after do
-    FileUtils.rm_rf(temp_dir) if File.exist?(temp_dir)
+    FileUtils.rm_rf(temp_dir)
   end
 
   describe ".sanitize_path" do
@@ -78,7 +78,7 @@ RSpec.describe Caruso::PathSanitizer do
       end
 
       it "handles paths with trailing slashes" do
-        path_with_slash = safe_subdir + "/"
+        path_with_slash = "#{safe_subdir}/"
         result = described_class.sanitize_path(path_with_slash, base_dir: temp_dir)
         expect(result).to eq(safe_subdir)
       end

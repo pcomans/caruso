@@ -144,6 +144,7 @@ Metrics/PerceivedComplexity:
   Max: 12
   Exclude:
     - 'lib/caruso/cli.rb'
+    - 'lib/caruso/fetcher.rb'  # Security validation requires complex checks
 
 # Duplicate branches are acceptable for error handling with different contexts
 Lint/DuplicateBranch:
