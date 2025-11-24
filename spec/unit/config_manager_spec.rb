@@ -21,12 +21,6 @@ RSpec.describe Caruso::ConfigManager do
       expect(File.exist?(local_config_path)).to be true
     end
 
-    it "adds local config to gitignore" do
-      manager.init(ide: "cursor")
-      gitignore = File.read(File.join(project_dir, ".gitignore"))
-      expect(gitignore).to include(".caruso.local.json")
-    end
-
     it "raises error if already initialized" do
       manager.init(ide: "cursor")
       expect { manager.init(ide: "cursor") }.to raise_error(Caruso::Error)

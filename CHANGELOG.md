@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2025-11-23
+
+### Changed
+- Removed automatic `.gitignore` editing - developers now manage their own .gitignore
+- Improved `caruso init` output to clearly show which files should be committed vs gitignored
+- Updated CLI output to provide recommended .gitignore entries without modifying the file
+
+### Added
+- Clear VCS documentation in README explaining which files to track
+- Example `.gitignore` snippet in README for easy copy-paste
+- Helpful init output showing "(commit this)" and "(add to .gitignore)" labels
+
+### Removed
+- `update_gitignore` method from ConfigManager
+- Automatic .gitignore modification during initialization
+
 ## [0.4.0] - 2025-11-23
 
 ### Changed
@@ -161,7 +177,8 @@ This release adopts Claude Code's proven architecture patterns:
 - Automatic conversion of Claude Code plugins to Cursor Rules format
 - Plugin metadata preservation and frontmatter injection
 
-[Unreleased]: https://github.com/pcomans/caruso/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pcomans/caruso/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/pcomans/caruso/releases/tag/v0.5.0
 [0.4.0]: https://github.com/pcomans/caruso/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pcomans/caruso/releases/tag/v0.3.0
 [0.2.0]: https://github.com/pcomans/caruso/releases/tag/v0.2.0

@@ -27,8 +27,9 @@ RSpec.describe "Caruso Initialization", type: :integration do
 
       expect(last_command_started).to have_output(/Project directory:/)
       expect(last_command_started).to have_output(%r{Target directory: \.cursor/rules})
-      expect(last_command_started).to have_output(/Project Config:/)
-      expect(last_command_started).to have_output(/Local Config:/)
+      expect(last_command_started).to have_output(/caruso\.json \(commit this\)/)
+      expect(last_command_started).to have_output(/\.caruso\.local\.json \(add to \.gitignore\)/)
+      expect(last_command_started).to have_output(/Recommended \.gitignore entries:/)
     end
 
     it "prevents double initialization" do

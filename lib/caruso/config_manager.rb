@@ -46,9 +46,6 @@ module Caruso
       }
       save_local_config(local_config)
 
-      # Add to .gitignore if it exists and doesn't already have it
-      update_gitignore
-
       { **project_config, **local_config }
     end
 
@@ -188,19 +185,6 @@ module Caruso
 
     def save_local_config(data)
       File.write(@local_config_path, JSON.pretty_generate(data))
-    end
-
-    def update_gitignore
-      gitignore_path = File.join(@project_dir, ".gitignore")
-      content = File.exist?(gitignore_path) ? File.read(gitignore_path) : ""
-      
-      unless content.include?(LOCAL_CONFIG_FILENAME)
-        File.open(gitignore_path, "a") do |f|
-          f.puts
-          f.puts "# Caruso local configuration"
-          f.puts LOCAL_CONFIG_FILENAME
-        end
-      end
     end
   end
 end

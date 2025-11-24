@@ -58,6 +58,18 @@ This creates a `caruso.json` config file for project settings and `.caruso.local
 - Configures target directory (`.cursor/rules` for Cursor)
 - All subsequent commands automatically use this configuration
 
+**Version Control:**
+- ✅ **Commit to VCS:** `caruso.json` - Contains project plugin configuration (shared with team)
+- ❌ **Add to .gitignore:** `.caruso.local.json` - Contains local state (machine-specific)
+- ❌ **Add to .gitignore:** `.cursor/rules/caruso/` - Generated plugin files (build artifacts)
+
+Add these to your `.gitignore`:
+```
+# Caruso
+.caruso.local.json
+.cursor/rules/caruso/
+```
+
 ### Marketplace commands
 
 Manage plugin marketplaces to discover and install plugins from different sources.

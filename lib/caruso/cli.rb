@@ -501,8 +501,14 @@ module Caruso
         puts "✓ Initialized Caruso for #{config['ide']}"
         puts "  Project directory: #{config_manager.project_dir}"
         puts "  Target directory: #{config['target_dir']}"
-        puts "  Project Config: #{config_manager.project_config_path}"
-        puts "  Local Config: #{config_manager.local_config_path}"
+        puts ""
+        puts "Created files:"
+        puts "  ✓ caruso.json (commit this)"
+        puts "  ✓ .caruso.local.json (add to .gitignore)"
+        puts ""
+        puts "Recommended .gitignore entries:"
+        puts "  .caruso.local.json"
+        puts "  #{config['target_dir']}/caruso/"
       rescue ArgumentError => e
         puts "Error: #{e.message}"
         exit 1
