@@ -7,7 +7,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
     # Skip init for config file structure tests - they test init itself
     unless self.class.metadata[:skip_init]
       init_caruso
-      add_marketplace()
+      add_marketplace
     end
   end
 
@@ -129,7 +129,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
   describe "project config file structure", :skip_init do
     it "creates valid JSON config" do
       init_caruso
-      add_marketplace()
+      add_marketplace
 
       config = load_project_config
       expect(config).to be_a(Hash)
@@ -137,7 +137,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
 
     it "has marketplaces section" do
       init_caruso
-      add_marketplace()
+      add_marketplace
 
       config = load_project_config
       expect(config).to have_key("marketplaces")
@@ -205,7 +205,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       expect(config["ide"]).to eq("cursor")
       expect(config["target_dir"]).to eq(".cursor/rules")
     end
-    
+
     it "tracks installed files", :live do
       skip "Requires live marketplace access" unless ENV["RUN_LIVE_TESTS"]
 
@@ -215,7 +215,7 @@ RSpec.describe "File Conversion Validation", type: :integration do
       plugin_key = "#{plugin_name}@test-skills"
 
       run_command("caruso plugin install #{plugin_key}")
-      
+
       config = load_local_config
       expect(config["installed_files"]).to have_key(plugin_key)
       expect(config["installed_files"][plugin_key]).to be_a(Array)

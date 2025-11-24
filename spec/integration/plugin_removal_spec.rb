@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Removal", type: :integration do
   before do
     init_caruso
-    add_marketplace()
+    add_marketplace
   end
 
   describe "caruso plugin uninstall" do
@@ -20,7 +20,7 @@ RSpec.describe "Plugin Removal", type: :integration do
 
         run_command("caruso plugin install #{plugin_name}@test-skills")
         expect(last_command_started).to be_successfully_executed
-        
+
         plugin_key = "#{plugin_name}@test-skills"
         expect(load_config["plugins"]).to have_key(plugin_key)
 
@@ -78,8 +78,8 @@ RSpec.describe "Plugin Removal", type: :integration do
 
         run_command("caruso plugin uninstall test-plugin@test-skills")
 
-        expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test.mdc/)
-        expect(last_command_started).to have_output(/Deleted .cursor\/rules\/test2.mdc/)
+        expect(last_command_started).to have_output(%r{Deleted .cursor/rules/test.mdc})
+        expect(last_command_started).to have_output(%r{Deleted .cursor/rules/test2.mdc})
         expect(File.exist?(".cursor/rules/test.mdc")).to be false
       end
     end

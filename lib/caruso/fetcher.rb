@@ -61,7 +61,7 @@ module Caruso
       end
 
       @registry.update_timestamp(@marketplace_name)
-    rescue => e
+    rescue StandardError => e
       handle_git_error(e)
     end
 
@@ -69,7 +69,7 @@ module Caruso
       url = source_config["url"] || source_config["repo"]
       url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
 
-      repo_name = URI.parse(url).path.split("/").last.sub(".git", "")
+      URI.parse(url).path.split("/").last.sub(".git", "")
       target_path = cache_dir
 
       unless Dir.exist?(target_path)

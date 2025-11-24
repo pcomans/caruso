@@ -240,7 +240,7 @@ RSpec.describe Caruso::MarketplaceRegistry do
 
   describe "source type tracking" do
     it "supports different source types" do
-      source_types = ["git", "github", "url", "local", "directory"]
+      source_types = %w[git github url local directory]
 
       source_types.each_with_index do |source, index|
         registry.add_marketplace(

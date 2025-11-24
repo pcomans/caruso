@@ -41,15 +41,15 @@ RSpec.describe Caruso::Fetcher do
     it "finds files in default directories" do
       plugin_dir = File.join(marketplace_dir, "standard-plugin")
       create_plugin_structure(plugin_dir, [
-        "commands/deploy.md",
-        "agents/reviewer.md",
-        "skills/pdf/SKILL.md"
-      ])
+                                "commands/deploy.md",
+                                "agents/reviewer.md",
+                                "skills/pdf/SKILL.md"
+                              ])
 
       create_marketplace([{
-        "name" => "standard-plugin",
-        "source" => "./standard-plugin"
-      }])
+                           "name" => "standard-plugin",
+                           "source" => "./standard-plugin"
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("standard-plugin")
@@ -61,15 +61,15 @@ RSpec.describe Caruso::Fetcher do
     it "excludes README.md and LICENSE.md" do
       plugin_dir = File.join(marketplace_dir, "standard-plugin")
       create_plugin_structure(plugin_dir, [
-        "commands/deploy.md",
-        "commands/README.md",
-        "skills/LICENSE.md"
-      ])
+                                "commands/deploy.md",
+                                "commands/README.md",
+                                "skills/LICENSE.md"
+                              ])
 
       create_marketplace([{
-        "name" => "standard-plugin",
-        "source" => "./standard-plugin"
-      }])
+                           "name" => "standard-plugin",
+                           "source" => "./standard-plugin"
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("standard-plugin")
@@ -83,16 +83,16 @@ RSpec.describe Caruso::Fetcher do
     it "includes both default and custom command paths" do
       plugin_dir = File.join(marketplace_dir, "custom-commands")
       create_plugin_structure(plugin_dir, [
-        "commands/standard.md",
-        "custom/special.md",
-        "experimental/beta.md"
-      ])
+                                "commands/standard.md",
+                                "custom/special.md",
+                                "experimental/beta.md"
+                              ])
 
       create_marketplace([{
-        "name" => "custom-commands",
-        "source" => "./custom-commands",
-        "commands" => ["./custom/special.md", "./experimental/"]
-      }])
+                           "name" => "custom-commands",
+                           "source" => "./custom-commands",
+                           "commands" => ["./custom/special.md", "./experimental/"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-commands")
@@ -104,15 +104,15 @@ RSpec.describe Caruso::Fetcher do
     it "handles string format for commands" do
       plugin_dir = File.join(marketplace_dir, "custom-commands")
       create_plugin_structure(plugin_dir, [
-        "commands/standard.md",
-        "custom/special.md"
-      ])
+                                "commands/standard.md",
+                                "custom/special.md"
+                              ])
 
       create_marketplace([{
-        "name" => "custom-commands",
-        "source" => "./custom-commands",
-        "commands" => "./custom/special.md"
-      }])
+                           "name" => "custom-commands",
+                           "source" => "./custom-commands",
+                           "commands" => "./custom/special.md"
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-commands")
@@ -126,16 +126,16 @@ RSpec.describe Caruso::Fetcher do
     it "includes both default and custom agent paths" do
       plugin_dir = File.join(marketplace_dir, "custom-agents")
       create_plugin_structure(plugin_dir, [
-        "agents/standard.md",
-        "custom/agents/security.md",
-        "experimental/agents/ai.md"
-      ])
+                                "agents/standard.md",
+                                "custom/agents/security.md",
+                                "experimental/agents/ai.md"
+                              ])
 
       create_marketplace([{
-        "name" => "custom-agents",
-        "source" => "./custom-agents",
-        "agents" => ["./custom/agents/", "./experimental/agents/"]
-      }])
+                           "name" => "custom-agents",
+                           "source" => "./custom-agents",
+                           "agents" => ["./custom/agents/", "./experimental/agents/"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-agents")
@@ -149,16 +149,16 @@ RSpec.describe Caruso::Fetcher do
     it "includes both default and custom skill paths" do
       plugin_dir = File.join(marketplace_dir, "custom-skills")
       create_plugin_structure(plugin_dir, [
-        "skills/pdf/SKILL.md",
-        "document-skills/xlsx/SKILL.md",
-        "document-skills/docx/SKILL.md"
-      ])
+                                "skills/pdf/SKILL.md",
+                                "document-skills/xlsx/SKILL.md",
+                                "document-skills/docx/SKILL.md"
+                              ])
 
       create_marketplace([{
-        "name" => "custom-skills",
-        "source" => "./custom-skills",
-        "skills" => ["./document-skills/xlsx", "./document-skills/docx"]
-      }])
+                           "name" => "custom-skills",
+                           "source" => "./custom-skills",
+                           "skills" => ["./document-skills/xlsx", "./document-skills/docx"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("custom-skills")
@@ -174,21 +174,21 @@ RSpec.describe Caruso::Fetcher do
     it "handles commands, agents, and skills together" do
       plugin_dir = File.join(marketplace_dir, "all-custom")
       create_plugin_structure(plugin_dir, [
-        "commands/standard.md",
-        "agents/standard.md",
-        "skills/standard/SKILL.md",
-        "custom/cmd/special.md",
-        "custom/agents/special.md",
-        "custom/skills/special/SKILL.md"
-      ])
+                                "commands/standard.md",
+                                "agents/standard.md",
+                                "skills/standard/SKILL.md",
+                                "custom/cmd/special.md",
+                                "custom/agents/special.md",
+                                "custom/skills/special/SKILL.md"
+                              ])
 
       create_marketplace([{
-        "name" => "all-custom",
-        "source" => "./all-custom",
-        "commands" => ["./custom/cmd/"],
-        "agents" => ["./custom/agents/"],
-        "skills" => ["./custom/skills/"]
-      }])
+                           "name" => "all-custom",
+                           "source" => "./all-custom",
+                           "commands" => ["./custom/cmd/"],
+                           "agents" => ["./custom/agents/"],
+                           "skills" => ["./custom/skills/"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("all-custom")
@@ -201,14 +201,14 @@ RSpec.describe Caruso::Fetcher do
     it "deduplicates files that appear in both default and custom paths" do
       plugin_dir = File.join(marketplace_dir, "duplicate-plugin")
       create_plugin_structure(plugin_dir, [
-        "commands/deploy.md"
-      ])
+                                "commands/deploy.md"
+                              ])
 
       create_marketplace([{
-        "name" => "duplicate-plugin",
-        "source" => "./duplicate-plugin",
-        "commands" => ["./commands/deploy.md"]
-      }])
+                           "name" => "duplicate-plugin",
+                           "source" => "./duplicate-plugin",
+                           "commands" => ["./commands/deploy.md"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("duplicate-plugin")
@@ -222,14 +222,14 @@ RSpec.describe Caruso::Fetcher do
     it "gracefully handles missing custom path directories" do
       plugin_dir = File.join(marketplace_dir, "missing-paths")
       create_plugin_structure(plugin_dir, [
-        "commands/standard.md"
-      ])
+                                "commands/standard.md"
+                              ])
 
       create_marketplace([{
-        "name" => "missing-paths",
-        "source" => "./missing-paths",
-        "commands" => ["./nonexistent/dir/"]
-      }])
+                           "name" => "missing-paths",
+                           "source" => "./missing-paths",
+                           "commands" => ["./nonexistent/dir/"]
+                         }])
 
       fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
       files = fetcher.fetch("missing-paths")

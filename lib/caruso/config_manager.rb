@@ -167,6 +167,7 @@ module Caruso
 
     def load_project_config
       return {} unless File.exist?(@project_config_path)
+
       JSON.parse(File.read(@project_config_path))
     rescue JSON::ParserError
       {}
@@ -178,6 +179,7 @@ module Caruso
 
     def load_local_config
       return {} unless File.exist?(@local_config_path)
+
       JSON.parse(File.read(@local_config_path))
     rescue JSON::ParserError
       {}

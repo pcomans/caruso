@@ -21,7 +21,7 @@ module Caruso
 
       # For Git repos, clone/update the cache (skip in test mode to allow fake URLs)
       if (source == "github" || url.match?(/\Ahttps?:/) || url.match?(%r{[^/]+/[^/]+})) && !ENV["CARUSO_TESTING_SKIP_CLONE"]
-        fetcher.clone_git_repo({"url" => url, "source" => source})
+        fetcher.clone_git_repo({ "url" => url, "source" => source })
       end
 
       # Read marketplace name from marketplace.json
@@ -86,14 +86,14 @@ module Caruso
       end
 
       puts "Marketplace: #{name}"
-      puts "  Source: #{marketplace['source']}" if marketplace['source']
+      puts "  Source: #{marketplace['source']}" if marketplace["source"]
       puts "  URL: #{marketplace['url']}"
       puts "  Location: #{marketplace['install_location']}"
       puts "  Last Updated: #{marketplace['last_updated']}"
-      puts "  Ref: #{marketplace['ref']}" if marketplace['ref']
+      puts "  Ref: #{marketplace['ref']}" if marketplace["ref"]
 
       # Check if directory actually exists
-      if Dir.exist?(marketplace['install_location'])
+      if Dir.exist?(marketplace["install_location"])
         puts "  Status: ✓ Cached locally"
       else
         puts "  Status: ✗ Cache directory missing"
@@ -121,7 +121,8 @@ module Caruso
 
         puts "Updating marketplace '#{name}'..."
         begin
-          fetcher = Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: name, ref: marketplace_details["ref"])
+          fetcher = Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: name,
+                                                                    ref: marketplace_details["ref"])
           fetcher.update_cache
           puts "Updated marketplace '#{name}'"
         rescue StandardError => e
@@ -139,15 +140,13 @@ module Caruso
         error_count = 0
 
         marketplaces.each do |marketplace_name, details|
-          begin
-            puts "  Updating #{marketplace_name}..."
-            fetcher = Caruso::Fetcher.new(details["url"], marketplace_name: marketplace_name, ref: details["ref"])
-            fetcher.update_cache
-            success_count += 1
-          rescue StandardError => e
-            puts "  Error updating #{marketplace_name}: #{e.message}"
-            error_count += 1
-          end
+          puts "  Updating #{marketplace_name}..."
+          fetcher = Caruso::Fetcher.new(details["url"], marketplace_name: marketplace_name, ref: details["ref"])
+          fetcher.update_cache
+          success_count += 1
+        rescue StandardError => e
+          puts "  Error updating #{marketplace_name}: #{e.message}"
+          error_count += 1
         end
 
         puts "\nUpdated #{success_count} marketplace(s)" + (error_count.positive? ? " (#{error_count} failed)" : "")
@@ -323,14 +322,12 @@ module Caruso
         error_count = 0
 
         installed_plugins.each do |key, plugin_data|
-          begin
-            puts "  Updating #{key}..."
-            update_single_plugin(key, plugin_data, config_manager)
-            success_count += 1
-          rescue StandardError => e
-            puts "  Error updating #{key}: #{e.message}"
-            error_count += 1
-          end
+          puts "  Updating #{key}..."
+          update_single_plugin(key, plugin_data, config_manager)
+          success_count += 1
+        rescue StandardError => e
+          puts "  Error updating #{key}: #{e.message}"
+          error_count += 1
         end
 
         puts "\nUpdated #{success_count} plugin(s)" + (error_count.positive? ? " (#{error_count} failed)" : "")
@@ -377,7 +374,7 @@ module Caruso
     desc "outdated", "Show plugins with available updates"
     def outdated
       config_manager = load_config
-      target_dir = config_manager.full_target_path
+      config_manager.full_target_path
 
       installed_plugins = config_manager.list_plugins
 
@@ -389,7 +386,7 @@ module Caruso
       puts "Checking for updates..."
       outdated_plugins = []
 
-      marketplaces = config_manager.list_marketplaces
+      config_manager.list_marketplaces
 
       installed_plugins.each do |key, plugin_data|
         marketplace_name = plugin_data["marketplace"]
@@ -399,7 +396,8 @@ module Caruso
         next unless marketplace_details
 
         begin
-          fetcher = Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: marketplace_name, ref: marketplace_details["ref"])
+          Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: marketplace_name,
+                                                          ref: marketplace_details["ref"])
           # For now, we'll just report that updates might be available
           # Full version comparison would require version tracking in marketplace.json
           outdated_plugins << {
@@ -438,7 +436,8 @@ module Caruso
       end
 
       # Update marketplace cache first
-      fetcher = Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: marketplace_name, ref: marketplace_details["ref"])
+      fetcher = Caruso::Fetcher.new(marketplace_details["url"], marketplace_name: marketplace_name,
+                                                                ref: marketplace_details["ref"])
       fetcher.update_cache
 
       # Parse plugin name from key (plugin@marketplace)

@@ -10,7 +10,7 @@ RSpec.describe "Update Functionality", type: :integration do
   describe "caruso marketplace update" do
     context "when marketplace exists" do
       before do
-        add_marketplace()
+        add_marketplace
       end
 
       it "updates a specific marketplace", :live do
@@ -44,7 +44,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
     context "when marketplace does not exist" do
       before do
-        add_marketplace()
+        add_marketplace
       end
 
       it "shows error message" do
@@ -83,7 +83,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
       it "continues updating other marketplaces if one fails" do
         add_marketplace(test_marketplace_path)
-        # Note: Cannot test with invalid URL since we need valid marketplace.json to get the name
+        # NOTE: Cannot test with invalid URL since we need valid marketplace.json to get the name
         # This test scenario is not feasible with the new design where name comes from marketplace.json
 
         run_command("caruso marketplace update")
@@ -96,7 +96,7 @@ RSpec.describe "Update Functionality", type: :integration do
       it "refreshes marketplace cache" do
         # This test verifies that the update command refreshes the cached marketplace data
         # In practice, this means git pull on the cached repo
-        add_marketplace()
+        add_marketplace
 
         run_command("caruso marketplace update skills")
 
@@ -104,11 +104,11 @@ RSpec.describe "Update Functionality", type: :integration do
       end
 
       it "updates timestamp of last marketplace fetch" do
-        add_marketplace()
+        add_marketplace
 
-        before_time = Time.now - 1
+        Time.now
         run_command("caruso marketplace update skills")
-        after_time = Time.now + 1
+        Time.now
 
         # Verify marketplace was updated recently (implementation-specific)
         expect(last_command_started).to be_successfully_executed
@@ -118,7 +118,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "caruso plugin update" do
     before do
-      add_marketplace()
+      add_marketplace
     end
 
     context "when plugin is installed" do
@@ -332,7 +332,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "caruso plugin outdated" do
     before do
-      add_marketplace()
+      add_marketplace
     end
 
     it "shows plugins with updates available", :live do
@@ -391,7 +391,7 @@ RSpec.describe "Update Functionality", type: :integration do
 
   describe "update edge cases" do
     before do
-      add_marketplace()
+      add_marketplace
     end
 
     it "handles network failures gracefully" do
@@ -419,7 +419,7 @@ RSpec.describe "Update Functionality", type: :integration do
         }
       }
       File.write(config_file, JSON.pretty_generate(project_config))
-      
+
       # Force failure by corrupting marketplace URL temporarily
       project_config["marketplaces"]["test-skills"]["url"] = "https://invalid-url"
       File.write(config_file, JSON.pretty_generate(project_config))

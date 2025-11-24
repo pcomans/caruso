@@ -10,7 +10,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
   describe "caruso marketplace remove" do
     context "when marketplace exists" do
       it "removes marketplace from config" do
-        add_marketplace()
+        add_marketplace
 
         # Verify it was added
         expect(load_project_config["marketplaces"]).to have_key("test-skills")
@@ -23,7 +23,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "shows confirmation message" do
-        add_marketplace()
+        add_marketplace
 
         run_command("caruso marketplace remove test-skills")
 
@@ -48,7 +48,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "does not affect plugins section when removing marketplace" do
-        add_marketplace()
+        add_marketplace
 
         # Simulate having a plugin installed
         project_config = load_project_config
@@ -75,7 +75,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "does not modify config when removing non-existent marketplace" do
-        add_marketplace()
+        add_marketplace
 
         config_before = load_project_config
         run_command("caruso marketplace remove nonexistent")
@@ -87,7 +87,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
 
     context "when removing last marketplace" do
       it "leaves empty marketplaces hash" do
-        add_marketplace()
+        add_marketplace
 
         # Verify it was added
         expect(load_project_config["marketplaces"]).to have_key("test-skills")
@@ -102,7 +102,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
       end
 
       it "maintains config structure with other sections" do
-        add_marketplace()
+        add_marketplace
 
         # Add a plugin to ensure other sections remain
         project_config = load_project_config
@@ -155,7 +155,7 @@ RSpec.describe "Marketplace Removal", type: :integration do
     end
 
     it "handles removal with corrupted marketplace name" do
-      add_marketplace()
+      add_marketplace
 
       run_command("caruso marketplace remove 'name with spaces'")
 

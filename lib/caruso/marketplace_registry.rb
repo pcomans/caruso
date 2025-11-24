@@ -15,7 +15,7 @@ module Caruso
     def add_marketplace(name, url, install_location, ref: nil, source: "git")
       data = load_registry
       data[name] = {
-        "source" => source,  # github, git, url, local, directory
+        "source" => source, # github, git, url, local, directory
         "url" => url,
         "install_location" => install_location,
         "last_updated" => Time.now.iso8601,
@@ -51,7 +51,7 @@ module Caruso
 
     # Enhancement #3: Schema validation
     def validate_marketplace_entry(entry)
-      required = ["url", "install_location", "last_updated"]
+      required = %w[url install_location last_updated]
       missing = required - entry.keys
 
       unless missing.empty?
@@ -71,7 +71,7 @@ module Caruso
       data = JSON.parse(File.read(@registry_path))
 
       # Validate each entry
-      data.each do |name, entry|
+      data.each do |_name, entry|
         validate_marketplace_entry(entry)
       end
 

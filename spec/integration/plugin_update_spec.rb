@@ -5,7 +5,7 @@ require "spec_helper"
 RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
   before do
     init_caruso
-    add_marketplace()
+    add_marketplace
   end
 
   describe "plugin reinstallation (update scenario)" do
@@ -20,13 +20,13 @@ RSpec.describe "Plugin Updates and Reinstallation", type: :integration do
       # Install plugin
       run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      
-      first_files = load_local_config["installed_files"][plugin_key]
+
+      load_local_config["installed_files"][plugin_key]
 
       # Reinstall
       run_command("caruso plugin install #{plugin_key}")
       expect(last_command_started).to be_successfully_executed
-      
+
       second_files = load_local_config["installed_files"][plugin_key]
 
       # Files list should be updated (even if identical in this case)
