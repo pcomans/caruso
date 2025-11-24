@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2025-11-23
+
+### Changed
+- Updated GitHub Actions workflow to only trigger on version tags (`v*`) instead of every push to main
+
+### Fixed
+- Added debugging to verify RubyGems API token is loaded correctly in CI/CD
+
+### Note
+- This release and versions 0.5.0-0.5.2 were used to test and configure continuous deployment to RubyGems and GitHub Packages
+
+## [0.5.2] - 2025-11-23
+
+### Note
+- Testing continuous deployment workflow
+
+## [0.5.1] - 2025-11-23
+
+### Note
+- Testing continuous deployment workflow
+
 ## [0.5.0] - 2025-11-23
 
 ### Changed
@@ -177,7 +198,10 @@ This release adopts Claude Code's proven architecture patterns:
 - Automatic conversion of Claude Code plugins to Cursor Rules format
 - Plugin metadata preservation and frontmatter injection
 
-[Unreleased]: https://github.com/pcomans/caruso/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/pcomans/caruso/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/pcomans/caruso/releases/tag/v0.5.3
+[0.5.2]: https://github.com/pcomans/caruso/releases/tag/v0.5.2
+[0.5.1]: https://github.com/pcomans/caruso/releases/tag/v0.5.1
 [0.5.0]: https://github.com/pcomans/caruso/releases/tag/v0.5.0
 [0.4.0]: https://github.com/pcomans/caruso/releases/tag/v0.4.0
 [0.3.0]: https://github.com/pcomans/caruso/releases/tag/v0.3.0
