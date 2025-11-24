@@ -33,7 +33,7 @@ RSpec.configure do |config|
 
       # Clear registry for fresh testing
       registry_file = File.join(caruso_dir, "known_marketplaces.json")
-      FileUtils.rm_f(registry_file) if File.exist?(registry_file)
+      FileUtils.rm_f(registry_file)
     end
   end
 

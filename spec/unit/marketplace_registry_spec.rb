@@ -249,9 +249,7 @@ RSpec.describe Caruso::MarketplaceRegistry do
           "/path/#{index}",
           source: source
         )
-      end
 
-      source_types.each_with_index do |source, index|
         marketplace = registry.get_marketplace("marketplace-#{index}")
         expect(marketplace["source"]).to eq(source)
       end

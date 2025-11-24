@@ -71,7 +71,7 @@ module Caruso
       data = JSON.parse(File.read(@registry_path))
 
       # Validate each entry
-      data.each do |_name, entry|
+      data.each_value do |entry|
         validate_marketplace_entry(entry)
       end
 

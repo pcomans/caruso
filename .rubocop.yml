@@ -1,5 +1,5 @@
 AllCops:
-  TargetRubyVersion: 3.0
+  TargetRubyVersion: 3.2
   NewCops: enable
   SuggestExtensions: false
   Exclude:
@@ -31,6 +31,7 @@ Metrics/MethodLength:
   Exclude:
     - 'spec/**/*'
     - 'lib/caruso/cli.rb'  # CLI command methods can be longer
+    - 'lib/caruso/fetcher.rb'  # Marketplace loading is complex
 
 # Line length - modern screens can handle more
 Layout/LineLength:
@@ -38,6 +39,7 @@ Layout/LineLength:
   Exclude:
     - 'spec/**/*'
     - '*.gemspec'
+    - 'lib/caruso/cli.rb'  # CLI methods can have longer conditional lines
 
 # Allow longer parameter lists for complex methods
 Metrics/ParameterLists:
@@ -56,6 +58,8 @@ Metrics/ClassLength:
   Max: 150
   Exclude:
     - 'spec/**/*'
+    - 'lib/caruso/cli.rb'  # CLI class has many Thor commands
+    - 'lib/caruso/fetcher.rb'  # Fetcher handles multiple sources
 
 # Prefer descriptive block parameter names
 Lint/UnusedBlockArgument:

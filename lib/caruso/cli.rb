@@ -105,12 +105,12 @@ module Caruso
       config_manager = load_config
       marketplaces = config_manager.list_marketplaces
 
+      if marketplaces.empty?
+        puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
+        return
+      end
       if name
         # Update specific marketplace
-        if marketplaces.empty?
-          puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
-          return
-        end
 
         marketplace_details = config_manager.get_marketplace_details(name)
         unless marketplace_details
@@ -130,10 +130,6 @@ module Caruso
         end
       else
         # Update all marketplaces
-        if marketplaces.empty?
-          puts "No marketplaces configured. Use 'caruso marketplace add <url>' to get started."
-          return
-        end
 
         puts "Updating all marketplaces..."
         success_count = 0
