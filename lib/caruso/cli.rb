@@ -55,22 +55,9 @@ module Caruso
     def remove(name)
       config_manager = load_config
 
-      # Remove from config
-      config_manager.remove_marketplace(name)
-
-      # Remove from registry
-      registry = Caruso::MarketplaceRegistry.new
-      marketplace = registry.get_marketplace(name)
-      if marketplace
-        cache_dir = marketplace["install_location"]
-        registry.remove_marketplace(name)
-
-        # Inform about cache directory
-        if Dir.exist?(cache_dir)
-          puts "Cache directory still exists at: #{cache_dir}"
-          puts "Run 'rm -rf #{cache_dir}' to delete it if desired."
-        end
-      end
+      # Use Remover to handle cleanup
+      remover = Caruso::Remover.new(config_manager)
+      remover.remove_marketplace(name)
 
       puts "Removed marketplace '#{name}'"
     end
@@ -260,15 +247,9 @@ module Caruso
       end
 
       puts "Removing #{plugin_key}..."
-      files_to_remove = config_manager.remove_plugin(plugin_key)
 
-      files_to_remove.each do |file|
-        full_path = File.join(config_manager.project_dir, file)
-        if File.exist?(full_path)
-          File.delete(full_path)
-          puts "  Deleted #{file}"
-        end
-      end
+      remover = Caruso::Remover.new(config_manager)
+      remover.remove_plugin(plugin_key)
 
       puts "Uninstalled #{plugin_key}."
     end

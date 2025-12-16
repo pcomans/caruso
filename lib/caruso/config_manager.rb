@@ -150,6 +150,23 @@ module Caruso
       save_project_config(data)
     end
 
+    def remove_marketplace_with_plugins(marketplace_name)
+      files_to_remove = []
+
+      # Find and remove all plugins associated with this marketplace
+      installed_plugins = list_plugins
+      installed_plugins.each do |plugin_key, details|
+        if details["marketplace"] == marketplace_name
+          files_to_remove.concat(remove_plugin(plugin_key))
+        end
+      end
+
+      # Remove the marketplace itself
+      remove_marketplace(marketplace_name)
+
+      files_to_remove.uniq
+    end
+
     def list_marketplaces
       load_project_config["marketplaces"] || {}
     end
