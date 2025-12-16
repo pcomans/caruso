@@ -66,9 +66,8 @@ module Caruso
         if match
           name = match[0]
         else
-          puts "Error: Marketplace '#{name_or_url}' not found."
-          puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
-          exit 1
+          puts "Marketplace '#{name_or_url}' not found."
+          return
         end
       end
 

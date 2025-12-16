@@ -273,4 +273,5 @@ Version is managed in `lib/caruso/version.rb`.
 
 # Memory
 - The goal is a clean, correct, consistent implementation. Never implement fallbacks that hide errors or engage in defensive programming.
+- **Idempotency**: Removal commands (`marketplace remove`, `plugin uninstall`) are designed to be idempotent. They exit successfully (0) if the target does not exist. This is intentional for automation friendliness and is NOT considered "hiding errors".
 - Treat the vendor directory .cursor/rules/caruso/ as a build artifact
