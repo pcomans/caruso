@@ -9,15 +9,15 @@ RSpec.describe "Marketplace Uninstall", type: :integration do
 
   it "removes installed plugins when marketplace is removed" do
     # 1. Setup: Add marketplace and install plugin
-    
-    # We need a plugin to install. We can fake the config for this test 
-    # to avoid needing a real network request or complex fixture setup 
+
+    # We need a plugin to install. We can fake the config for this test
+    # to avoid needing a real network request or complex fixture setup
     # if we just want to test the CLI logic for removal.
     # However, to test full integration we might want to "install" carefully.
-    
-    # Let's manually inject the state into caruso.json and .caruso.local.json 
+
+    # Let's manually inject the state into caruso.json and .caruso.local.json
     # to simulate an installed plugin, as if `caruso plugin install` had run.
-    
+
     project_config = load_project_config
     project_config["marketplaces"]["test-skills"] = {
       "url" => "https://github.com/test/skills",
@@ -45,7 +45,7 @@ RSpec.describe "Marketplace Uninstall", type: :integration do
     expect(last_command_started).to be_successfully_executed
 
     # 3. Assertion: Verify cleanup
-    
+
     # Marketplace should be gone
     updated_project_config = load_project_config
     expect(updated_project_config["marketplaces"]).not_to include("test-skills")

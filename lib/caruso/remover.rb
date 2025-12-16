@@ -51,10 +51,10 @@ module Caruso
       registry.remove_marketplace(name)
 
       # Inform about cache directory
-      if Dir.exist?(cache_dir)
-        puts "Cache directory still exists at: #{cache_dir}"
-        puts "Run 'rm -rf #{cache_dir}' to delete it if desired."
-      end
+      return unless Dir.exist?(cache_dir)
+
+      puts "Cache directory still exists at: #{cache_dir}"
+      puts "Run 'rm -rf #{cache_dir}' to delete it if desired."
     end
   end
 end
