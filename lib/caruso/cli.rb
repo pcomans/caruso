@@ -51,9 +51,26 @@ module Caruso
       end
     end
 
-    desc "remove NAME", "Remove a marketplace"
-    def remove(name)
+    desc "remove NAME_OR_URL", "Remove a marketplace"
+    def remove(name_or_url)
       config_manager = load_config
+      marketplaces = config_manager.list_marketplaces
+
+      # Try to find by name first
+      if marketplaces.key?(name_or_url)
+        name = name_or_url
+      else
+        # Try to find by URL
+        # We need to check exact match or maybe normalized match
+        match = marketplaces.find { |_, details| details["url"] == name_or_url || details["url"].chomp(".git") == name_or_url }
+        if match
+          name = match[0]
+        else
+          puts "Error: Marketplace '#{name_or_url}' not found."
+          puts "Available marketplaces: #{marketplaces.keys.join(', ')}"
+          exit 1
+        end
+      end
 
       # Use Remover to handle cleanup
       remover = Caruso::Remover.new(config_manager)
