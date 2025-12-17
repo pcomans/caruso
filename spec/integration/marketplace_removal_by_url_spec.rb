@@ -26,10 +26,10 @@ RSpec.describe "Marketplace Cancellation", type: :integration do
     expect(config["marketplaces"]).not_to include("test-skills")
   end
 
-  it "errors when removing a non-existent marketplace" do
+  it "handles removing a non-existent marketplace gracefully" do
     run_command("caruso marketplace remove non-existent")
 
-    expect(last_command_started).not_to be_successfully_executed
+    expect(last_command_started).to be_successfully_executed
     expect(last_command_started).to have_output(/Marketplace 'non-existent' not found/)
   end
 end

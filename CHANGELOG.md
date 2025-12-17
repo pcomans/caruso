@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.2] - 2025-12-17
+
+### Fixed
+- `marketplace remove` now exits gracefully (code 0) when marketplace is not found, making it idempotent
+- Documented idempotent behavior of `marketplace remove` and `plugin uninstall` in README
+
 ## [0.6.0] - 2025-11-24
 
 ### Security
@@ -20,11 +26,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Adapter` now strictly validates file existence and raises errors instead of silently skipping invalid files
 - `Fetcher` now filters glob results to ensure they remain within trusted plugin directories
 
-## [0.6.1] - 2025-12-16
-
-### Fixed
-- `marketplace remove` now exits gracefully (code 0) when marketplace is not found, making it idempotent
-- Documented idempotent behavior of `marketplace remove` and `plugin uninstall` in README
 
 ## [0.5.3] - 2025-11-23
 
