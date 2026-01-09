@@ -239,4 +239,47 @@ RSpec.describe Caruso::Fetcher do
       expect(File.basename(files.first)).to eq("standard.md")
     end
   end
+
+  describe "#fetch_plugin with recursive skills" do
+    it "recursively fetches all files in skill directories" do
+      plugin_dir = File.join(marketplace_dir, "recursive-skills")
+      create_plugin_structure(plugin_dir, [
+                                "skills/my-skill/SKILL.md",
+                                "skills/my-skill/scripts/run.sh",
+                                "skills/my-skill/assets/data.json"
+                              ])
+
+      create_marketplace([{
+                           "name" => "recursive-skills",
+                           "source" => "./recursive-skills"
+                         }])
+
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
+      files = fetcher.fetch("recursive-skills")
+
+      expect(files.length).to eq(3)
+      base_names = files.map { |f| File.basename(f) }
+      expect(base_names).to include("SKILL.md", "run.sh", "data.json")
+    end
+
+    it "recursively fetches skills defined in manifest" do
+      plugin_dir = File.join(marketplace_dir, "manifest-skills")
+      create_plugin_structure(plugin_dir, [
+                                "custom/skill/SKILL.md",
+                                "custom/skill/lib/helper.rb"
+                              ])
+
+      create_marketplace([{
+                           "name" => "manifest-skills",
+                           "source" => "./manifest-skills",
+                           "skills" => ["./custom/skill"]
+                         }])
+
+      fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
+      files = fetcher.fetch("manifest-skills")
+
+      expect(files.length).to eq(2)
+      expect(files.map { |f| File.basename(f) }).to include("SKILL.md", "helper.rb")
+    end
+  end
 end

@@ -181,12 +181,7 @@ module Caruso
       return [] unless SafeDir.exist?(plugin_path)
 
       # Start with default directories
-      files = find_steering_files(plugin_path)
-
-      # Add custom paths if specified (they supplement defaults)
-      files += find_custom_component_files(plugin_path, plugin["commands"]) if plugin["commands"]
-      files += find_custom_component_files(plugin_path, plugin["agents"]) if plugin["agents"]
-      files += find_custom_component_files(plugin_path, plugin["skills"]) if plugin["skills"]
+      files = find_steering_files(plugin_path, plugin)
 
       files.uniq
     end
@@ -210,18 +205,44 @@ module Caruso
       end
     end
 
-    def find_steering_files(plugin_path)
-      # Validate plugin_path before using it in glob
-      # This is safe because plugin_path comes from resolve_plugin_path which returns trusted paths
-      # (either from cache_dir which is under ~/.caruso, or validated local paths)
-      glob_pattern = PathSanitizer.safe_join(plugin_path, "{commands,agents,skills}", "**", "*.md")
+    # Find all steering files based on default locations and manifest overrides
+    # RETURNS: unique list of absolute file paths to fetch
+    def find_steering_files(plugin_path, plugin_data = nil)
+      files = []
 
-      SafeDir.glob(glob_pattern, base_dir: plugin_path).reject do |file|
+      # 1. ALWAYS scan default directories (Additive Strategy)
+      files += glob_plugin_files(plugin_path, "commands", "**", "*.md")
+      files += glob_plugin_files(plugin_path, "agents", "**", "*.md")
+      
+      # For skills, we want recursive default scan if 'skills/' exists
+      # But careful: if we scan default 'skills' recursively here, and then scan strict paths from manifest...
+      # Duplicate handling is fine via uniq.
+      default_skills_path = File.join(plugin_path, "skills")
+      if SafeDir.exist?(default_skills_path)
+         files += find_recursive_component_files(plugin_path, "skills") 
+      end
+
+      # 2. Add manifest-defined paths (if present)
+      if plugin_data
+        files += find_custom_component_files(plugin_path, plugin_data["commands"]) if plugin_data["commands"]
+        files += find_custom_component_files(plugin_path, plugin_data["agents"]) if plugin_data["agents"]
+        files += find_recursive_component_files(plugin_path, plugin_data["skills"]) if plugin_data["skills"]
+      end
+
+      # Filter out noise
+      files.uniq.reject do |file|
         basename = File.basename(file).downcase
-        ["readme.md", "license.md"].include?(basename)
+        ["readme.md", "license.md", "plugin.json"].include?(basename) || File.directory?(file)
       end
     end
 
+    # Helper to glob files safely
+    def glob_plugin_files(plugin_path, *parts)
+       pattern = PathSanitizer.safe_join(plugin_path, *parts)
+       SafeDir.glob(pattern, base_dir: plugin_path)
+    end
+
+    # For Commands/Agents: typically just markdown files, flat or shallow
     def find_custom_component_files(plugin_path, paths)
       # Handle both string and array formats
       paths = [paths] if paths.is_a?(String)
@@ -229,29 +250,48 @@ module Caruso
 
       files = []
       paths.each do |path|
-        # Resolve and sanitize the path relative to plugin_path
-        # This ensures the path stays within plugin_path boundaries
-        begin
-          full_path = PathSanitizer.sanitize_path(File.expand_path(path, plugin_path), base_dir: plugin_path)
-        rescue PathSanitizer::PathTraversalError => e
-          warn "Skipping path outside plugin directory '#{path}': #{e.message}"
-          next
-        end
+        full_path = resolve_safe_path(plugin_path, path)
+        next unless full_path
 
-        # Handle both files and directories
         if File.file?(full_path) && full_path.end_with?(".md")
-          basename = File.basename(full_path).downcase
-          files << full_path unless ["readme.md", "license.md"].include?(basename)
+          files << full_path
         elsif SafeDir.exist?(full_path, base_dir: plugin_path)
-          # Find all .md files in this directory using safe_join
+          # Find all .md files in this directory
           glob_pattern = PathSanitizer.safe_join(full_path, "**", "*.md")
-          SafeDir.glob(glob_pattern, base_dir: plugin_path).each do |file|
-            basename = File.basename(file).downcase
-            files << file unless ["readme.md", "license.md"].include?(basename)
-          end
+          files += SafeDir.glob(glob_pattern, base_dir: plugin_path)
         end
       end
       files
+    end
+    
+    # For SKILLS: Recursive fetch of EVERYTHING (scripts, assets, md)
+    def find_recursive_component_files(plugin_path, paths)
+       paths = [paths] if paths.is_a?(String)
+       return [] unless paths.is_a?(Array)
+       
+       files = []
+       paths.each do |path|
+         full_path = resolve_safe_path(plugin_path, path)
+         next unless full_path
+         
+         if File.file?(full_path)
+            files << full_path
+         elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+            # Grab EVERYTHING recursively
+            glob_pattern = PathSanitizer.safe_join(full_path, "**", "*")
+            files += SafeDir.glob(glob_pattern, base_dir: plugin_path)
+         end
+       end
+       files
+    end
+    
+    def resolve_safe_path(plugin_path, relative_path)
+        begin
+          PathSanitizer.sanitize_path(File.expand_path(relative_path, plugin_path), base_dir: plugin_path)
+        rescue PathSanitizer::PathTraversalError => e
+          warn "Skipping path outside plugin directory '#{relative_path}': #{e.message}"
+          nil
+        end
     end
 
     def local_path?
