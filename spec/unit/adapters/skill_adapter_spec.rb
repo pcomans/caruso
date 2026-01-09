@@ -27,8 +27,9 @@ RSpec.describe Caruso::Adapters::SkillAdapter do
       # Setup skill files
       skill_md = create_file("skills/my-skill/SKILL.md", "---\ndescription: My Skill\n---\n# Content")
       script_sh = create_file("skills/my-skill/scripts/run.sh", "#!/bin/bash\necho hello")
+      asset_txt = create_file("skills/my-skill/reference/docs.txt", "some info")
       
-      files = [skill_md, script_sh]
+      files = [skill_md, script_sh, asset_txt]
       
       adapter = described_class.new(
         files,
@@ -57,6 +58,12 @@ RSpec.describe Caruso::Adapters::SkillAdapter do
       expect(File.exist?(script_target_path)).to be true
       expect(File.executable?(script_target_path)).to be true
       expect(File.read(script_target_path)).to include("echo hello")
+      
+      # Verify Asset creation (e.g. reference files)
+      # Structure: .cursor/scripts/caruso/<market>/<plugin>/<skill>/reference/docs.txt
+      asset_target_path = File.join(target_dir, ".cursor/scripts/caruso", marketplace_name, plugin_name, "my-skill", "reference", "docs.txt")
+      expect(File.exist?(asset_target_path)).to be true
+      expect(File.read(asset_target_path)).to include("some info")
     end
   end
 end
