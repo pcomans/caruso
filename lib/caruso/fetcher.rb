@@ -180,10 +180,39 @@ module Caruso
 
       return [] unless SafeDir.exist?(plugin_path)
 
-      # Start with default directories
-      files = find_steering_files(plugin_path, plugin)
+      # Merge marketplace entry with plugin.json (marketplace takes precedence)
+      merged_plugin_data = merge_with_plugin_json(plugin, plugin_path)
+
+      files = find_steering_files(plugin_path, merged_plugin_data)
 
       files.uniq
+    end
+
+    # Read plugin.json and merge with marketplace entry.
+    # Marketplace fields override plugin.json fields for component paths.
+    def merge_with_plugin_json(marketplace_entry, plugin_path)
+      plugin_json_path = File.join(plugin_path, ".claude-plugin", "plugin.json")
+      return marketplace_entry unless File.exist?(plugin_json_path)
+
+      begin
+        plugin_data = JSON.parse(SafeFile.read(plugin_json_path))
+      rescue JSON::ParserError => e
+        puts "Warning: Could not parse plugin.json: #{e.message}"
+        return marketplace_entry
+      end
+
+      component_fields = %w[commands agents skills hooks mcpServers]
+      merged = marketplace_entry.dup
+
+      component_fields.each do |field|
+        # Only use plugin.json value if marketplace entry doesn't specify this field
+        next if merged.key?(field)
+        next unless plugin_data.key?(field)
+
+        merged[field] = plugin_data[field]
+      end
+
+      merged
     end
 
     def resolve_plugin_path(source)
@@ -227,6 +256,36 @@ module Caruso
         files += find_custom_component_files(plugin_path, plugin_data["commands"]) if plugin_data["commands"]
         files += find_custom_component_files(plugin_path, plugin_data["agents"]) if plugin_data["agents"]
         files += find_recursive_component_files(plugin_path, plugin_data["skills"]) if plugin_data["skills"]
+      end
+
+      # 3. Detect hooks.json in hooks/ directory
+      hooks_file = File.join(plugin_path, "hooks", "hooks.json")
+      files << hooks_file if File.exist?(hooks_file)
+
+      # Also check for custom hooks path or inline config from manifest
+      if plugin_data && plugin_data["hooks"]
+        hooks_value = plugin_data["hooks"]
+
+        if hooks_value.is_a?(Hash)
+          # Inline hooks config — write to a temp hooks.json in the plugin directory
+          inline_hooks_path = File.join(plugin_path, ".caruso_inline_hooks.json")
+          File.write(inline_hooks_path, JSON.pretty_generate(hooks_value))
+          files << inline_hooks_path
+        else
+          # Path-based hooks config (string or array of paths)
+          custom_hooks = [hooks_value].flatten
+          custom_hooks.each do |path|
+            full_path = resolve_safe_path(plugin_path, path)
+            next unless full_path
+
+            if File.file?(full_path) && File.basename(full_path) == "hooks.json"
+              files << full_path
+            elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+              candidate = File.join(full_path, "hooks.json")
+              files << candidate if File.exist?(candidate)
+            end
+          end
+        end
       end
 
       # Filter out noise

@@ -79,7 +79,7 @@ module Caruso
 
     # Plugin Management
 
-    def add_plugin(name, files, marketplace_name:)
+    def add_plugin(name, files, marketplace_name:, hooks: {})
       # Update project config (Intent)
       project_data = load_project_config
       project_data["plugins"] ||= {}
@@ -88,23 +88,36 @@ module Caruso
       }
       save_project_config(project_data)
 
-      # Update local config (Files)
+      # Update local config (Files and Hooks)
       local_data = load_local_config
       local_data["installed_files"] ||= {}
       local_data["installed_files"][name] = files
+
+      # Track installed hook commands for clean uninstall
+      local_data["installed_hooks"] ||= {}
+      if hooks.empty?
+        local_data["installed_hooks"].delete(name)
+      else
+        local_data["installed_hooks"][name] = hooks
+      end
+
       save_local_config(local_data)
     end
 
     def remove_plugin(name)
-      # Get files to remove from local config
+      # Get files and hooks to remove from local config
       local_data = load_local_config
       files = local_data.dig("installed_files", name) || []
+      hooks = local_data.dig("installed_hooks", name) || {}
 
       # Remove from local config
       if local_data["installed_files"]
         local_data["installed_files"].delete(name)
-        save_local_config(local_data)
       end
+      if local_data["installed_hooks"]
+        local_data["installed_hooks"].delete(name)
+      end
+      save_local_config(local_data)
 
       # Remove from project config
       project_data = load_project_config
@@ -113,7 +126,7 @@ module Caruso
         save_project_config(project_data)
       end
 
-      files
+      { files: files, hooks: hooks }
     end
 
     def list_plugins
@@ -127,6 +140,10 @@ module Caruso
 
     def get_installed_files(name)
       load_local_config.dig("installed_files", name) || []
+    end
+
+    def get_installed_hooks(name)
+      load_local_config.dig("installed_hooks", name) || {}
     end
 
     # Marketplace Management
@@ -151,20 +168,23 @@ module Caruso
     end
 
     def remove_marketplace_with_plugins(marketplace_name)
-      files_to_remove = []
+      result = { files: [], hooks: {} }
 
       # Find and remove all plugins associated with this marketplace
       installed_plugins = list_plugins
       installed_plugins.each do |plugin_key, details|
         if details["marketplace"] == marketplace_name
-          files_to_remove.concat(remove_plugin(plugin_key))
+          plugin_result = remove_plugin(plugin_key)
+          result[:files].concat(plugin_result[:files])
+          result[:hooks].merge!(plugin_result[:hooks])
         end
       end
 
       # Remove the marketplace itself
       remove_marketplace(marketplace_name)
 
-      files_to_remove.uniq
+      result[:files] = result[:files].uniq
+      result
     end
 
     def list_marketplaces

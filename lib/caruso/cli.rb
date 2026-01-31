@@ -227,12 +227,21 @@ module Caruso
       )
       created_filenames = adapter.adapt
 
-      # Convert filenames to relative paths from project root
-      created_files = created_filenames.map { |f| File.join(config_manager.target_dir, f) }
+      # Convert filenames to project-relative paths.
+      # Paths already starting with .cursor/ (commands, hooks) are already project-relative.
+      # Others (rules from SkillAdapter/MarkdownAdapter) are relative to target_dir.
+      created_files = created_filenames.map do |f|
+        if f.start_with?(".cursor/") || File.absolute_path?(f)
+          f
+        else
+          File.join(config_manager.target_dir, f)
+        end
+      end
 
       # Use composite key for uniqueness
       plugin_key = "#{plugin_name}@#{marketplace_name}"
-      config_manager.add_plugin(plugin_key, created_files, marketplace_name: marketplace_name)
+      config_manager.add_plugin(plugin_key, created_files, marketplace_name: marketplace_name,
+                                                           hooks: adapter.installed_hooks)
       puts "Installed #{plugin_name}!"
     end
 
@@ -455,8 +464,14 @@ module Caruso
       )
       created_filenames = adapter.adapt
 
-      # Convert filenames to relative paths from project root
-      created_files = created_filenames.map { |f| File.join(config_manager.target_dir, f) }
+      # Convert filenames to project-relative paths (same logic as install)
+      created_files = created_filenames.map do |f|
+        if f.start_with?(".cursor/") || File.absolute_path?(f)
+          f
+        else
+          File.join(config_manager.target_dir, f)
+        end
+      end
 
       # Cleanup: Delete files that are no longer present
       old_files = config_manager.get_installed_files(plugin_key)
@@ -470,7 +485,8 @@ module Caruso
       end
 
       # Update plugin in config
-      config_manager.add_plugin(plugin_key, created_files, marketplace_name: marketplace_name)
+      config_manager.add_plugin(plugin_key, created_files, marketplace_name: marketplace_name,
+                                                           hooks: adapter.installed_hooks)
     end
 
     def load_config

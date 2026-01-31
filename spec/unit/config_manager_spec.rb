@@ -54,11 +54,13 @@ RSpec.describe Caruso::ConfigManager do
       expect(local_config["installed_files"]["test-plugin@market"]).to eq(["file1.md"])
     end
 
-    it "removes plugin and returns files" do
-      manager.add_plugin("test-plugin@market", ["file1.md"], marketplace_name: "market")
-      files = manager.remove_plugin("test-plugin@market")
+    it "removes plugin and returns files and hooks" do
+      manager.add_plugin("test-plugin@market", ["file1.md"], marketplace_name: "market",
+                                                             hooks: { "stop" => [{ "command" => "echo done" }] })
+      result = manager.remove_plugin("test-plugin@market")
 
-      expect(files).to eq(["file1.md"])
+      expect(result[:files]).to eq(["file1.md"])
+      expect(result[:hooks]).to eq({ "stop" => [{ "command" => "echo done" }] })
 
       project_config = JSON.parse(File.read(project_config_path))
       local_config = JSON.parse(File.read(local_config_path))
