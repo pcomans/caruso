@@ -10,6 +10,24 @@
       "source": "./plugins/test-plugin",
       "description": "A test plugin",
       "version": "1.0.0"
+    },
+    {
+      "name": "hooks-plugin",
+      "source": "./plugins/hooks-plugin",
+      "description": "A second plugin with hooks for merge testing",
+      "version": "1.0.0"
+    },
+    {
+      "name": "agent-plugin",
+      "source": "./plugins/agent-plugin",
+      "description": "A plugin with an agent and a command",
+      "version": "1.0.0"
+    },
+    {
+      "name": "broken-plugin",
+      "source": "./plugins/broken-plugin",
+      "description": "A plugin with a malformed hooks.json",
+      "version": "1.0.0"
     }
   ]
 }

@@ -42,7 +42,22 @@ module Caruso
         if File.exist?(full_path)
           File.delete(full_path)
           puts "  Deleted #{file}"
+          cleanup_empty_parents(full_path)
         end
+      end
+    end
+
+    # Walk up from a deleted file's parent, removing empty directories
+    # until we hit .cursor/ itself or a non-empty directory.
+    def cleanup_empty_parents(file_path)
+      cursor_dir = File.join(config_manager.project_dir, ".cursor")
+      dir = File.dirname(file_path)
+
+      while dir != cursor_dir && dir.start_with?(cursor_dir)
+        break unless Dir.exist?(dir) && Dir.empty?(dir)
+
+        Dir.rmdir(dir)
+        dir = File.dirname(dir)
       end
     end
 
