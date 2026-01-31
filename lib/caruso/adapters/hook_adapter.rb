@@ -19,7 +19,7 @@ module Caruso
 
       # PostToolUse with Write|Edit matchers should map to afterFileEdit instead.
       # We detect this via the matcher pattern.
-      FILE_EDIT_MATCHERS = /\A(Write|Edit|Write\|Edit|Edit\|Write|Notebook.*)\z/i.freeze
+      FILE_EDIT_MATCHERS = /\A(Write|Edit|Write\|Edit|Edit\|Write|Notebook.*)\z/i
 
       # Events that have no Cursor equivalent and must be skipped.
       UNSUPPORTED_EVENTS = %w[
@@ -90,42 +90,50 @@ module Caruso
             next
           end
 
-          matchers.each do |matcher_entry|
-            hooks_array = matcher_entry["hooks"] || []
-            matcher = matcher_entry["matcher"]
+          result = translate_event_hooks(event_name, matchers)
+          result[:hooks].each { |event, entries| (cursor_hooks[event] ||= []).concat(entries) }
+          skipped_prompts += result[:skipped_prompts]
+        end
 
-            hooks_array.each do |hook|
-              # Skip prompt-based hooks (Cursor doesn't support LLM evaluation in hooks)
-              if hook["type"] == "prompt"
-                skipped_prompts += 1
-                next
-              end
+        warn_skipped(skipped_events, skipped_prompts)
+        cursor_hooks
+      end
 
-              command = hook["command"]
-              next unless command
+      def translate_event_hooks(event_name, matchers)
+        hooks = {}
+        skipped = 0
 
-              cursor_event = resolve_cursor_event(event_name, matcher)
-              cursor_hook = { "command" => command }
-              cursor_hook["timeout"] = hook["timeout"] if hook["timeout"]
-
-              cursor_hooks[cursor_event] ||= []
-              cursor_hooks[cursor_event] << cursor_hook
+        matchers.each do |matcher_entry|
+          matcher = matcher_entry["matcher"]
+          (matcher_entry["hooks"] || []).each do |hook|
+            if hook["type"] == "prompt"
+              skipped += 1
+              next
             end
+
+            command = hook["command"]
+            next unless command
+
+            cursor_event = resolve_cursor_event(event_name, matcher)
+            cursor_hook = { "command" => command }
+            cursor_hook["timeout"] = hook["timeout"] if hook["timeout"]
+            (hooks[cursor_event] ||= []) << cursor_hook
           end
         end
 
-        # Warn about skipped items
+        { hooks: hooks, skipped_prompts: skipped }
+      end
+
+      def warn_skipped(skipped_events, skipped_prompts)
         if skipped_events.any?
           unique_skipped = skipped_events.uniq
-          puts "Skipping #{unique_skipped.size} unsupported hook event(s): #{unique_skipped.join(", ")}"
+          puts "Skipping #{unique_skipped.size} unsupported hook event(s): #{unique_skipped.join(', ')}"
           puts "  (Cursor has no equivalent for these Claude Code lifecycle events)"
         end
 
-        if skipped_prompts > 0
-          puts "Skipping #{skipped_prompts} prompt-based hook(s): Cursor does not support LLM evaluation in hooks"
-        end
+        return unless skipped_prompts.positive?
 
-        cursor_hooks
+        puts "Skipping #{skipped_prompts} prompt-based hook(s): Cursor does not support LLM evaluation in hooks"
       end
 
       def resolve_cursor_event(cc_event, matcher)
@@ -137,11 +145,8 @@ module Caruso
         EVENT_MAP[cc_event] || "afterShellExecution"
       end
 
-      def rewrite_script_path(command, hooks_file)
-        # Replace ${CLAUDE_PLUGIN_ROOT} with path relative to .cursor/hooks.json
-        # Plugin scripts land in .cursor/hooks/caruso/<marketplace>/<plugin>/
+      def rewrite_script_path(command)
         plugin_script_dir = File.join("hooks", "caruso", marketplace_name, plugin_name)
-
         command.gsub("${CLAUDE_PLUGIN_ROOT}", plugin_script_dir)
       end
 
@@ -159,35 +164,28 @@ module Caruso
 
       def copy_hook_scripts(cursor_hooks, hooks_file)
         plugin_root = plugin_root_from_hooks_file(hooks_file)
-        copied = []
 
-        cursor_hooks.each_value do |hook_entries|
-          hook_entries.each do |hook|
-            command = hook["command"]
-            next unless command&.include?("${CLAUDE_PLUGIN_ROOT}")
-
-            # Extract the relative path after ${CLAUDE_PLUGIN_ROOT}
-            relative_path = command.sub("${CLAUDE_PLUGIN_ROOT}/", "")
-            source_path = File.join(plugin_root, relative_path)
-            next unless File.exist?(source_path)
-
-            # Target: .cursor/hooks/caruso/<marketplace>/<plugin>/<relative_path>
-            target_path = File.join(
-              ".cursor", "hooks", "caruso", marketplace_name, plugin_name, relative_path
-            )
-
-            FileUtils.mkdir_p(File.dirname(target_path))
-            FileUtils.cp(source_path, target_path)
-            File.chmod(0o755, target_path)
-            puts "Copied hook script: #{target_path}"
-
-            # Rewrite the command in-place to use the new relative path
-            hook["command"] = rewrite_script_path(command, hooks_file)
-            copied << target_path
-          end
+        cursor_hooks.each_value.flat_map do |hook_entries|
+          hook_entries.filter_map { |hook| copy_single_script(hook, plugin_root) }
         end
+      end
 
-        copied
+      def copy_single_script(hook, plugin_root)
+        command = hook["command"]
+        return unless command&.include?("${CLAUDE_PLUGIN_ROOT}")
+
+        relative_path = command.sub("${CLAUDE_PLUGIN_ROOT}/", "")
+        source_path = File.join(plugin_root, relative_path)
+        return unless File.exist?(source_path)
+
+        target_path = File.join(".cursor", "hooks", "caruso", marketplace_name, plugin_name, relative_path)
+        FileUtils.mkdir_p(File.dirname(target_path))
+        FileUtils.cp(source_path, target_path)
+        File.chmod(0o755, target_path)
+        puts "Copied hook script: #{target_path}"
+
+        hook["command"] = rewrite_script_path(command)
+        target_path
       end
 
       def merge_hooks(new_hooks)

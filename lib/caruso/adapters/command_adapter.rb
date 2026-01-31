@@ -33,7 +33,7 @@ module Caruso
         end
       end
 
-      def preserve_command_frontmatter(content, file_path)
+      def preserve_command_frontmatter(content, _file_path)
         # Commands support: description, argument-hint, allowed-tools, model
         # We don't need globs or alwaysApply (those are for rules)
         # Just return content as-is, Claude Code commands are already compatible
@@ -56,18 +56,13 @@ module Caruso
       end
 
       def add_bash_execution_note(content)
-        # Find the frontmatter and add a note about bash execution
-        if content.match?(/\A---\s*\n(.*?)\n---\s*\n/m)
-          frontmatter = $1
-          rest_of_content = $'
+        match = content.match(/\A---\s*\n(.*?)\n---\s*\n/m)
+        return content unless match
 
-          note = "\n**Note:** This command originally used Claude Code's `!` prefix for bash execution. " \
-                 "Cursor does not support this feature. The bash commands are documented below for reference.\n"
+        note = "\n**Note:** This command originally used Claude Code's `!` prefix for bash execution. " \
+               "Cursor does not support this feature. The bash commands are documented below for reference.\n"
 
-          "---\n#{frontmatter}\n---\n#{note}#{rest_of_content}"
-        else
-          content
-        end
+        "---\n#{match[1]}\n---\n#{note}#{match.post_match}"
       end
 
       def save_command_file(relative_path, content)

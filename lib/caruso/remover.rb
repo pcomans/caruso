@@ -1,7 +1,6 @@
 # frozen_string_literal: true
 
 require "json"
-require "set"
 require_relative "marketplace_registry"
 
 module Caruso
@@ -39,11 +38,11 @@ module Caruso
       # Skip hooks.json — it's a merged file handled separately by remove_plugin_hooks
       files.reject { |f| File.basename(f) == "hooks.json" && f.include?(".cursor") }.each do |file|
         full_path = File.join(config_manager.project_dir, file)
-        if File.exist?(full_path)
-          File.delete(full_path)
-          puts "  Deleted #{file}"
-          cleanup_empty_parents(full_path)
-        end
+        next unless File.exist?(full_path)
+
+        File.delete(full_path)
+        puts "  Deleted #{file}"
+        cleanup_empty_parents(full_path)
       end
     end
 
@@ -74,29 +73,32 @@ module Caruso
         return
       end
 
+      return unless remove_tracked_commands(hooks, installed_hooks)
+
+      hooks.reject! { |_, entries| entries.empty? }
+      write_or_delete_hooks(hooks_path, hooks)
+    end
+
+    def remove_tracked_commands(hooks, installed_hooks)
       changed = false
       installed_hooks.each do |event, entries|
         next unless hooks[event]
 
-        # Build set of commands to remove for this event
         commands_to_remove = entries.map { |e| e["command"] }.compact.to_set
-
         before_count = hooks[event].length
         hooks[event].reject! { |entry| commands_to_remove.include?(entry["command"]) }
         changed = true if hooks[event].length != before_count
       end
+      changed
+    end
 
-      # Remove empty event arrays
-      hooks.reject! { |_, entries| entries.empty? }
-
-      if changed
-        if hooks.empty?
-          File.delete(hooks_path)
-          puts "  Deleted .cursor/hooks.json (empty after plugin removal)"
-        else
-          File.write(hooks_path, JSON.pretty_generate({ "version" => 1, "hooks" => hooks }))
-          puts "  Updated .cursor/hooks.json (removed plugin hooks)"
-        end
+    def write_or_delete_hooks(hooks_path, hooks)
+      if hooks.empty?
+        File.delete(hooks_path)
+        puts "  Deleted .cursor/hooks.json (empty after plugin removal)"
+      else
+        File.write(hooks_path, JSON.pretty_generate({ "version" => 1, "hooks" => hooks }))
+        puts "  Updated .cursor/hooks.json (removed plugin hooks)"
       end
     end
 

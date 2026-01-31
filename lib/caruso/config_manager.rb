@@ -54,11 +54,7 @@ module Caruso
         raise Error, "Caruso not initialized. Run 'caruso init --ide=cursor' first."
       end
 
-      project_data = load_project_config
-      local_data = load_local_config
-
-      # Merge data for easier access, but keep them conceptually separate
-      project_data.merge(local_data)
+      load_project_config.merge(load_local_config)
     end
 
     def config_exists?
@@ -76,8 +72,6 @@ module Caruso
     def ide
       load["ide"]
     end
-
-    # Plugin Management
 
     def add_plugin(name, files, marketplace_name:, hooks: {})
       # Update project config (Intent)
@@ -111,12 +105,8 @@ module Caruso
       hooks = local_data.dig("installed_hooks", name) || {}
 
       # Remove from local config
-      if local_data["installed_files"]
-        local_data["installed_files"].delete(name)
-      end
-      if local_data["installed_hooks"]
-        local_data["installed_hooks"].delete(name)
-      end
+      local_data["installed_files"]&.delete(name)
+      local_data["installed_hooks"]&.delete(name)
       save_local_config(local_data)
 
       # Remove from project config
@@ -134,8 +124,7 @@ module Caruso
     end
 
     def plugin_installed?(name)
-      plugins = list_plugins
-      plugins.key?(name)
+      list_plugins.key?(name)
     end
 
     def get_installed_files(name)
@@ -145,8 +134,6 @@ module Caruso
     def get_installed_hooks(name)
       load_local_config.dig("installed_hooks", name) || {}
     end
-
-    # Marketplace Management
 
     def add_marketplace(name, url, source: "git", ref: nil)
       data = load_project_config
@@ -173,11 +160,11 @@ module Caruso
       # Find and remove all plugins associated with this marketplace
       installed_plugins = list_plugins
       installed_plugins.each do |plugin_key, details|
-        if details["marketplace"] == marketplace_name
-          plugin_result = remove_plugin(plugin_key)
-          result[:files].concat(plugin_result[:files])
-          result[:hooks].merge!(plugin_result[:hooks])
-        end
+        next unless details["marketplace"] == marketplace_name
+
+        plugin_result = remove_plugin(plugin_key)
+        result[:files].concat(plugin_result[:files])
+        result[:hooks].merge!(plugin_result[:hooks])
       end
 
       # Remove the marketplace itself
@@ -193,11 +180,6 @@ module Caruso
 
     def get_marketplace_details(name)
       load_project_config.dig("marketplaces", name)
-    end
-
-    def get_marketplace_url(name)
-      details = get_marketplace_details(name)
-      details ? details["url"] : nil
     end
 
     private
