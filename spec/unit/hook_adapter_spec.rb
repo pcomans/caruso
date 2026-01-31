@@ -76,12 +76,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
     describe "event translation" do
       it "translates PreToolUse to beforeShellExecution" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PreToolUse" => [
-              { "matcher" => "Bash", "hooks" => [{ "type" => "command", "command" => "echo pre" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PreToolUse" => [
+                                            { "matcher" => "Bash", "hooks" => [{ "type" => "command", "command" => "echo pre" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -91,12 +91,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "translates PostToolUse with Bash matcher to afterShellExecution" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              { "matcher" => "Bash", "hooks" => [{ "type" => "command", "command" => "echo post-bash" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            { "matcher" => "Bash", "hooks" => [{ "type" => "command", "command" => "echo post-bash" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -106,12 +106,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "translates PostToolUse with Write matcher to afterFileEdit" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              { "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo post-write" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            { "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo post-write" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -121,12 +121,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "translates PostToolUse with Edit|Write matcher to afterFileEdit" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              { "matcher" => "Edit|Write", "hooks" => [{ "type" => "command", "command" => "echo format" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            { "matcher" => "Edit|Write", "hooks" => [{ "type" => "command", "command" => "echo format" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -136,12 +136,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "translates UserPromptSubmit to beforeSubmitPrompt" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "UserPromptSubmit" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo validate" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "UserPromptSubmit" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo validate" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -151,12 +151,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "translates Stop to stop" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo stopping" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo stopping" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -168,12 +168,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
     describe "unsupported event skipping" do
       it "skips SessionStart with warning" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "SessionStart" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo session" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "SessionStart" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo session" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         expect { adapter.adapt }.to output(/Skipping.*SessionStart/).to_stdout
 
@@ -183,14 +183,14 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "skips SessionEnd, SubagentStop, PreCompact, Notification, PermissionRequest" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "SessionEnd" => [{ "hooks" => [{ "type" => "command", "command" => "echo end" }] }],
-            "SubagentStop" => [{ "hooks" => [{ "type" => "command", "command" => "echo sub" }] }],
-            "PreCompact" => [{ "hooks" => [{ "type" => "command", "command" => "echo compact" }] }],
-            "Notification" => [{ "hooks" => [{ "type" => "command", "command" => "echo notify" }] }],
-            "PermissionRequest" => [{ "hooks" => [{ "type" => "command", "command" => "echo perm" }] }]
-          }
-        })
+                                        "hooks" => {
+                                          "SessionEnd" => [{ "hooks" => [{ "type" => "command", "command" => "echo end" }] }],
+                                          "SubagentStop" => [{ "hooks" => [{ "type" => "command", "command" => "echo sub" }] }],
+                                          "PreCompact" => [{ "hooks" => [{ "type" => "command", "command" => "echo compact" }] }],
+                                          "Notification" => [{ "hooks" => [{ "type" => "command", "command" => "echo notify" }] }],
+                                          "PermissionRequest" => [{ "hooks" => [{ "type" => "command", "command" => "echo perm" }] }]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         output = capture_output { adapter.adapt }
 
@@ -205,29 +205,29 @@ RSpec.describe Caruso::Adapters::HookAdapter do
     describe "prompt-based hook skipping" do
       it "skips type: prompt hooks with warning" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "prompt", "prompt" => "Should I stop?" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "prompt", "prompt" => "Should I stop?" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         expect { adapter.adapt }.to output(/prompt-based/).to_stdout
       end
 
       it "keeps type: command hooks alongside skipped prompt hooks" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              {
-                "hooks" => [
-                  { "type" => "prompt", "prompt" => "Should I stop?" },
-                  { "type" => "command", "command" => "echo check" }
-                ]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            {
+                                              "hooks" => [
+                                                { "type" => "prompt", "prompt" => "Should I stop?" },
+                                                { "type" => "command", "command" => "echo check" }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -239,15 +239,15 @@ RSpec.describe Caruso::Adapters::HookAdapter do
     describe "timeout preservation" do
       it "preserves timeout from Claude Code hooks" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              {
-                "matcher" => "Write",
-                "hooks" => [{ "type" => "command", "command" => "echo fmt", "timeout" => 30 }]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command", "command" => "echo fmt", "timeout" => 30 }]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -258,12 +258,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "omits timeout when not specified" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -277,15 +277,15 @@ RSpec.describe Caruso::Adapters::HookAdapter do
       it "copies scripts referenced by ${CLAUDE_PLUGIN_ROOT} and rewrites paths" do
         write_script("scripts/format.sh")
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              {
-                "matcher" => "Write",
-                "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/format.sh" }]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/format.sh" }]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -303,15 +303,15 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "does not fail if referenced script does not exist" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              {
-                "matcher" => "Write",
-                "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/missing.sh" }]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/missing.sh" }]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         # Should not raise
         adapter.adapt
@@ -324,15 +324,15 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "does not copy non-plugin-root commands" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              {
-                "matcher" => "Write",
-                "hooks" => [{ "type" => "command", "command" => "/usr/local/bin/formatter" }]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command", "command" => "/usr/local/bin/formatter" }]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -356,12 +356,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         File.write(".cursor/hooks.json", JSON.pretty_generate(existing))
 
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              { "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo new" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            { "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo new" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -383,12 +383,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         File.write(".cursor/hooks.json", JSON.pretty_generate(existing))
 
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -399,12 +399,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
 
       it "writes version: 1 in output" do
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo done" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -417,12 +417,12 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         File.write(".cursor/hooks.json", "not valid json {{{")
 
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "Stop" => [
-              { "hooks" => [{ "type" => "command", "command" => "echo recovered" }] }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "Stop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo recovered" }] }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         adapter.adapt
 
@@ -435,15 +435,15 @@ RSpec.describe Caruso::Adapters::HookAdapter do
       it "returns .cursor/hooks.json and any copied scripts" do
         write_script("scripts/lint.sh")
         hooks_file = write_hooks_json({
-          "hooks" => {
-            "PostToolUse" => [
-              {
-                "matcher" => "Write",
-                "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh" }]
-              }
-            ]
-          }
-        })
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command", "command" => "${CLAUDE_PLUGIN_ROOT}/scripts/lint.sh" }]
+                                            }
+                                          ]
+                                        }
+                                      })
         adapter = build_adapter(hooks_file)
         result = adapter.adapt
 

@@ -252,8 +252,8 @@ RSpec.describe Caruso::Fetcher do
       plugin_json_dir = File.join(plugin_dir, ".claude-plugin")
       FileUtils.mkdir_p(plugin_json_dir)
       File.write(File.join(plugin_json_dir, "plugin.json"), JSON.pretty_generate(
-        { "name" => "plugin-json-plugin", "commands" => ["./custom/"] }
-      ))
+                                                              { "name" => "plugin-json-plugin", "commands" => ["./custom/"] }
+                                                            ))
 
       create_marketplace([{
                            "name" => "plugin-json-plugin",
@@ -281,8 +281,8 @@ RSpec.describe Caruso::Fetcher do
       plugin_json_dir = File.join(plugin_dir, ".claude-plugin")
       FileUtils.mkdir_p(plugin_json_dir)
       File.write(File.join(plugin_json_dir, "plugin.json"), JSON.pretty_generate(
-        { "name" => "precedence-plugin", "commands" => ["./plugin-custom/"] }
-      ))
+                                                              { "name" => "precedence-plugin", "commands" => ["./plugin-custom/"] }
+                                                            ))
 
       # marketplace says use marketplace-custom/ — this should win
       create_marketplace([{
@@ -352,15 +352,15 @@ RSpec.describe Caruso::Fetcher do
       plugin_json_dir = File.join(plugin_dir, ".claude-plugin")
       FileUtils.mkdir_p(plugin_json_dir)
       File.write(File.join(plugin_json_dir, "plugin.json"), JSON.pretty_generate(
-        {
-          "name" => "inline-hooks-plugin",
-          "hooks" => {
-            "hooks" => {
-              "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo inline" }] }]
-            }
-          }
-        }
-      ))
+                                                              {
+                                                                "name" => "inline-hooks-plugin",
+                                                                "hooks" => {
+                                                                  "hooks" => {
+                                                                    "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo inline" }] }]
+                                                                  }
+                                                                }
+                                                              }
+                                                            ))
 
       create_marketplace([{
                            "name" => "inline-hooks-plugin",
@@ -386,8 +386,8 @@ RSpec.describe Caruso::Fetcher do
       hooks_dir = File.join(plugin_dir, "hooks")
       FileUtils.mkdir_p(hooks_dir)
       File.write(File.join(hooks_dir, "hooks.json"), JSON.pretty_generate(
-        { "hooks" => { "PostToolUse" => [{ "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo test" }] }] } }
-      ))
+                                                       { "hooks" => { "PostToolUse" => [{ "matcher" => "Write", "hooks" => [{ "type" => "command", "command" => "echo test" }] }] } }
+                                                     ))
 
       create_marketplace([{
                            "name" => "hooks-plugin",
@@ -410,8 +410,8 @@ RSpec.describe Caruso::Fetcher do
       custom_hooks_dir = File.join(plugin_dir, "custom", "my-hooks")
       FileUtils.mkdir_p(custom_hooks_dir)
       File.write(File.join(custom_hooks_dir, "hooks.json"), JSON.pretty_generate(
-        { "hooks" => { "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo stop" }] }] } }
-      ))
+                                                              { "hooks" => { "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo stop" }] }] } }
+                                                            ))
 
       create_marketplace([{
                            "name" => "custom-hooks-plugin",
@@ -433,8 +433,8 @@ RSpec.describe Caruso::Fetcher do
                               ])
       hooks_file = File.join(plugin_dir, "my-hooks.json")
       File.write(hooks_file, JSON.pretty_generate(
-        { "hooks" => { "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo stop" }] }] } }
-      ))
+                               { "hooks" => { "Stop" => [{ "hooks" => [{ "type" => "command", "command" => "echo stop" }] }] } }
+                             ))
       # Rename to hooks.json for the adapter to recognize it
       FileUtils.mv(hooks_file, File.join(plugin_dir, "hooks.json"))
 

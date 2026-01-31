@@ -27,10 +27,10 @@ module Caruso
 
       def save_file(relative_path, content, extension: nil)
         filename = File.basename(relative_path, ".*")
-        
+
         # Preserve original extension if none provided
         ext = extension || File.extname(relative_path)
-        
+
         # Rename SKILL.md to the skill name (parent directory) to avoid collisions
         # This is specific to Skills, might move to SkillAdapter later, but keeping behavior for now
         if filename.casecmp("skill").zero?
@@ -43,11 +43,11 @@ module Caruso
         # Component type is derived from the class name or passed in?
         # For base, we might need a way to determine output path more flexibly.
         # But sticking to current behavior:
-        
+
         component_type = extract_component_type(relative_path)
         subdirs = File.join("caruso", marketplace_name, plugin_name, component_type)
         output_dir = File.join(target_dir, subdirs)
-        
+
         FileUtils.mkdir_p(output_dir)
         target_path = File.join(output_dir, output_filename)
 
@@ -62,7 +62,7 @@ module Caruso
         return "commands" if file_path.include?("/commands/")
         return "agents" if file_path.include?("/agents/")
         return "skills" if file_path.include?("/skills/")
-        
+
         # Fallback or specific handling for other types
         "misc"
       end
