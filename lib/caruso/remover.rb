@@ -1,5 +1,6 @@
 # frozen_string_literal: true
 
+require "json"
 require_relative "marketplace_registry"
 
 module Caruso
@@ -11,12 +12,12 @@ module Caruso
     end
 
     def remove_marketplace(name)
-      # 1. Remove from config and get associated plugin files
-      # This updates both project config (plugins) and local config (files)
-      files_to_remove = config_manager.remove_marketplace_with_plugins(name)
+      # 1. Remove from config and get associated plugin files/hooks
+      result = config_manager.remove_marketplace_with_plugins(name)
 
-      # 2. Delete the actual files
-      delete_files(files_to_remove)
+      # 2. Delete the actual files and remove hooks
+      delete_files(result[:files])
+      remove_plugin_hooks(result[:hooks]) if result[:hooks] && !result[:hooks].empty?
 
       # 3. Clean up registry cache
       remove_from_registry(name)
@@ -24,21 +25,80 @@ module Caruso
 
     def remove_plugin(name)
       # 1. Remove from config
-      files_to_remove = config_manager.remove_plugin(name)
+      result = config_manager.remove_plugin(name)
 
-      # 2. Delete files
-      delete_files(files_to_remove)
+      # 2. Delete files and remove hooks
+      delete_files(result[:files])
+      remove_plugin_hooks(result[:hooks]) if result[:hooks] && !result[:hooks].empty?
     end
 
     private
 
     def delete_files(files)
-      files.each do |file|
+      # Skip hooks.json — it's a merged file handled separately by remove_plugin_hooks
+      files.reject { |f| File.basename(f) == "hooks.json" && f.include?(".cursor") }.each do |file|
         full_path = File.join(config_manager.project_dir, file)
-        if File.exist?(full_path)
-          File.delete(full_path)
-          puts "  Deleted #{file}"
-        end
+        next unless File.exist?(full_path)
+
+        File.delete(full_path)
+        puts "  Deleted #{file}"
+        cleanup_empty_parents(full_path)
+      end
+    end
+
+    # Walk up from a deleted file's parent, removing empty directories
+    # until we hit .cursor/ itself or a non-empty directory.
+    def cleanup_empty_parents(file_path)
+      cursor_dir = File.join(config_manager.project_dir, ".cursor")
+      dir = File.dirname(file_path)
+
+      while dir != cursor_dir && dir.start_with?(cursor_dir)
+        break unless Dir.exist?(dir) && Dir.empty?(dir)
+
+        Dir.rmdir(dir)
+        dir = File.dirname(dir)
+      end
+    end
+
+    # Remove specific hook entries from .cursor/hooks.json using tracked metadata.
+    # installed_hooks is a hash: { "event_name" => [{ "command" => "..." }, ...] }
+    def remove_plugin_hooks(installed_hooks)
+      hooks_path = File.join(config_manager.project_dir, ".cursor", "hooks.json")
+      return unless File.exist?(hooks_path)
+
+      begin
+        data = JSON.parse(File.read(hooks_path))
+        hooks = data["hooks"] || {}
+      rescue JSON::ParserError
+        return
+      end
+
+      return unless remove_tracked_commands(hooks, installed_hooks)
+
+      hooks.reject! { |_, entries| entries.empty? }
+      write_or_delete_hooks(hooks_path, hooks)
+    end
+
+    def remove_tracked_commands(hooks, installed_hooks)
+      changed = false
+      installed_hooks.each do |event, entries|
+        next unless hooks[event]
+
+        commands_to_remove = entries.map { |e| e["command"] }.compact.to_set
+        before_count = hooks[event].length
+        hooks[event].reject! { |entry| commands_to_remove.include?(entry["command"]) }
+        changed = true if hooks[event].length != before_count
+      end
+      changed
+    end
+
+    def write_or_delete_hooks(hooks_path, hooks)
+      if hooks.empty?
+        File.delete(hooks_path)
+        puts "  Deleted .cursor/hooks.json (empty after plugin removal)"
+      else
+        File.write(hooks_path, JSON.pretty_generate({ "version" => 1, "hooks" => hooks }))
+        puts "  Updated .cursor/hooks.json (removed plugin hooks)"
       end
     end
 

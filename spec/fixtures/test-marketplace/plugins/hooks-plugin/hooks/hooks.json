@@ -1,0 +1,26 @@
+{
+  "description": "Second plugin hooks for merge testing",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'hooks-plugin pre-tool hook'"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'hooks-plugin stop hook'"
+          }
+        ]
+      }
+    ]
+  }
+}
