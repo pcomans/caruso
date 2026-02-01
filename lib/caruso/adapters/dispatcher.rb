@@ -2,51 +2,81 @@
 
 require_relative "markdown_adapter"
 require_relative "skill_adapter"
+require_relative "command_adapter"
+require_relative "hook_adapter"
 
 module Caruso
   module Adapters
     class Dispatcher
-      def self.adapt(files, target_dir:, marketplace_name:, plugin_name:, agent: :cursor)
-        created_files = []
-        remaining_files = files.dup
+      class << self
+        def adapt(files, target_dir:, marketplace_name:, plugin_name:, agent: :cursor)
+          ctx = { target_dir: target_dir, marketplace_name: marketplace_name, plugin_name: plugin_name, agent: agent }
+          remaining = files.dup
+          created = []
 
-        # 1. Identify and Process Skill Clusters
-        # Find all SKILL.md files to serve as anchors
-        skill_anchors = remaining_files.select { |f| File.basename(f).casecmp("skill.md").zero? }
+          created.concat(process_skills(remaining, ctx))
+          created.concat(process_commands(remaining, ctx))
 
-        skill_anchors.each do |anchor|
-          skill_dir = File.dirname(anchor)
-          
-          # Find all files that belong to this skill's directory (recursive)
-          skill_cluster = remaining_files.select { |f| f.start_with?(skill_dir) }
-          
-          # Use SkillAdapter for this cluster
-          adapter = SkillAdapter.new(
-            skill_cluster,
-            target_dir: target_dir,
-            marketplace_name: marketplace_name,
-            plugin_name: plugin_name,
-            agent: agent
-          )
-          created_files.concat(adapter.adapt)
-          
-          # Remove processed files
-          remaining_files -= skill_cluster
+          hook_result = process_hooks(remaining, ctx)
+          created.concat(hook_result[:created])
+
+          skip_agents(remaining)
+          warn_unprocessed(remaining)
+
+          { files: created, hooks: hook_result[:hooks] }
         end
 
-        # 2. Process Remaining Files (Commands, Agents, etc.) via MarkdownAdapter
-        if remaining_files.any?
-          adapter = MarkdownAdapter.new(
-            remaining_files,
-            target_dir: target_dir,
-            marketplace_name: marketplace_name,
-            plugin_name: plugin_name,
-            agent: agent
-          )
-          created_files.concat(adapter.adapt)
+        private
+
+        def process_skills(remaining, ctx)
+          created = []
+          skill_anchors = remaining.select { |f| File.basename(f).casecmp("skill.md").zero? }
+
+          skill_anchors.each do |anchor|
+            skill_dir = File.dirname(anchor)
+            skill_cluster = remaining.select { |f| f.start_with?(skill_dir) }
+
+            adapter = SkillAdapter.new(skill_cluster, **ctx)
+            created.concat(adapter.adapt)
+            remaining.delete_if { |f| skill_cluster.include?(f) }
+          end
+
+          created
         end
 
-        created_files
+        def process_commands(remaining, ctx)
+          commands = remaining.select { |f| f.include?("/commands/") }
+          return [] unless commands.any?
+
+          adapter = CommandAdapter.new(commands, **ctx)
+          remaining.delete_if { |f| commands.include?(f) }
+          adapter.adapt
+        end
+
+        def process_hooks(remaining, ctx)
+          hooks_files = remaining.select { |f| File.basename(f) =~ /hooks\.json\z/ }
+          return { created: [], hooks: {} } unless hooks_files.any?
+
+          adapter = HookAdapter.new(hooks_files, **ctx)
+          created = adapter.adapt
+          remaining.delete_if { |f| hooks_files.include?(f) }
+          { created: created, hooks: adapter.translated_hooks }
+        end
+
+        def skip_agents(remaining)
+          agents = remaining.select { |f| f.include?("/agents/") }
+          return unless agents.any?
+
+          puts "Skipping #{agents.size} agent(s): Agents require context isolation not available in Cursor"
+          remaining.delete_if { |f| agents.include?(f) }
+        end
+
+        def warn_unprocessed(remaining)
+          return unless remaining.any?
+
+          puts "Warning: #{remaining.size} file(s) could not be categorized and were skipped:"
+          remaining.each { |f| puts "  - #{f}" }
+        end
       end
     end
   end

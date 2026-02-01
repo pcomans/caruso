@@ -180,10 +180,39 @@ module Caruso
 
       return [] unless SafeDir.exist?(plugin_path)
 
-      # Start with default directories
-      files = find_steering_files(plugin_path, plugin)
+      # Merge marketplace entry with plugin.json (marketplace takes precedence)
+      merged_plugin_data = merge_with_plugin_json(plugin, plugin_path)
+
+      files = find_steering_files(plugin_path, merged_plugin_data)
 
       files.uniq
+    end
+
+    # Read plugin.json and merge with marketplace entry.
+    # Marketplace fields override plugin.json fields for component paths.
+    def merge_with_plugin_json(marketplace_entry, plugin_path)
+      plugin_json_path = File.join(plugin_path, ".claude-plugin", "plugin.json")
+      return marketplace_entry unless File.exist?(plugin_json_path)
+
+      begin
+        plugin_data = JSON.parse(SafeFile.read(plugin_json_path))
+      rescue JSON::ParserError => e
+        puts "Warning: Could not parse plugin.json: #{e.message}"
+        return marketplace_entry
+      end
+
+      component_fields = %w[commands agents skills hooks mcpServers]
+      merged = marketplace_entry.dup
+
+      component_fields.each do |field|
+        # Only use plugin.json value if marketplace entry doesn't specify this field
+        next if merged.key?(field)
+        next unless plugin_data.key?(field)
+
+        merged[field] = plugin_data[field]
+      end
+
+      merged
     end
 
     def resolve_plugin_path(source)
@@ -213,13 +242,13 @@ module Caruso
       # 1. ALWAYS scan default directories (Additive Strategy)
       files += glob_plugin_files(plugin_path, "commands", "**", "*.md")
       files += glob_plugin_files(plugin_path, "agents", "**", "*.md")
-      
+
       # For skills, we want recursive default scan if 'skills/' exists
       # But careful: if we scan default 'skills' recursively here, and then scan strict paths from manifest...
       # Duplicate handling is fine via uniq.
       default_skills_path = File.join(plugin_path, "skills")
       if SafeDir.exist?(default_skills_path)
-         files += find_recursive_component_files(plugin_path, "skills") 
+        files += find_recursive_component_files(plugin_path, "skills")
       end
 
       # 2. Add manifest-defined paths (if present)
@@ -228,6 +257,9 @@ module Caruso
         files += find_custom_component_files(plugin_path, plugin_data["agents"]) if plugin_data["agents"]
         files += find_recursive_component_files(plugin_path, plugin_data["skills"]) if plugin_data["skills"]
       end
+
+      # 3. Detect hooks files
+      files += find_hooks_files(plugin_path, plugin_data)
 
       # Filter out noise
       files.uniq.reject do |file|
@@ -238,8 +270,8 @@ module Caruso
 
     # Helper to glob files safely
     def glob_plugin_files(plugin_path, *parts)
-       pattern = PathSanitizer.safe_join(plugin_path, *parts)
-       SafeDir.glob(pattern, base_dir: plugin_path)
+      pattern = PathSanitizer.safe_join(plugin_path, *parts)
+      SafeDir.glob(pattern, base_dir: plugin_path)
     end
 
     # For Commands/Agents: typically just markdown files, flat or shallow
@@ -263,35 +295,71 @@ module Caruso
       end
       files
     end
-    
+
     # For SKILLS: Recursive fetch of EVERYTHING (scripts, assets, md)
     def find_recursive_component_files(plugin_path, paths)
-       paths = [paths] if paths.is_a?(String)
-       return [] unless paths.is_a?(Array)
-       
-       files = []
-       paths.each do |path|
-         full_path = resolve_safe_path(plugin_path, path)
-         next unless full_path
-         
-         if File.file?(full_path)
-            files << full_path
-         elsif SafeDir.exist?(full_path, base_dir: plugin_path)
-            # Grab EVERYTHING recursively
-            glob_pattern = PathSanitizer.safe_join(full_path, "**", "*")
-            files += SafeDir.glob(glob_pattern, base_dir: plugin_path)
-         end
-       end
-       files
-    end
-    
-    def resolve_safe_path(plugin_path, relative_path)
-        begin
-          PathSanitizer.sanitize_path(File.expand_path(relative_path, plugin_path), base_dir: plugin_path)
-        rescue PathSanitizer::PathTraversalError => e
-          warn "Skipping path outside plugin directory '#{relative_path}': #{e.message}"
-          nil
+      paths = [paths] if paths.is_a?(String)
+      return [] unless paths.is_a?(Array)
+
+      files = []
+      paths.each do |path|
+        full_path = resolve_safe_path(plugin_path, path)
+        next unless full_path
+
+        if File.file?(full_path)
+          files << full_path
+        elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+          # Grab EVERYTHING recursively
+          glob_pattern = PathSanitizer.safe_join(full_path, "**", "*")
+          files += SafeDir.glob(glob_pattern, base_dir: plugin_path)
         end
+      end
+      files
+    end
+
+    def find_hooks_files(plugin_path, plugin_data)
+      files = []
+
+      # Default hooks/ directory
+      default_hooks = File.join(plugin_path, "hooks", "hooks.json")
+      files << default_hooks if File.exist?(default_hooks)
+
+      # Custom hooks from manifest (inline config or path-based)
+      return files unless plugin_data&.key?("hooks")
+
+      hooks_value = plugin_data["hooks"]
+      if hooks_value.is_a?(Hash)
+        inline_path = File.join(plugin_path, ".caruso_inline_hooks.json")
+        File.write(inline_path, JSON.pretty_generate(hooks_value))
+        files << inline_path
+      else
+        files += find_custom_hooks_paths(plugin_path, hooks_value)
+      end
+
+      files
+    end
+
+    def find_custom_hooks_paths(plugin_path, hooks_value)
+      files = []
+      [hooks_value].flatten.each do |path|
+        full_path = resolve_safe_path(plugin_path, path)
+        next unless full_path
+
+        if File.file?(full_path) && File.basename(full_path) == "hooks.json"
+          files << full_path
+        elsif SafeDir.exist?(full_path, base_dir: plugin_path)
+          candidate = File.join(full_path, "hooks.json")
+          files << candidate if File.exist?(candidate)
+        end
+      end
+      files
+    end
+
+    def resolve_safe_path(plugin_path, relative_path)
+      PathSanitizer.sanitize_path(File.expand_path(relative_path, plugin_path), base_dir: plugin_path)
+    rescue PathSanitizer::PathTraversalError => e
+      warn "Skipping path outside plugin directory '#{relative_path}': #{e.message}"
+      nil
     end
 
     def local_path?
