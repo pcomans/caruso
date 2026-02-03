@@ -341,6 +341,33 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         # Absolute system path is preserved as-is
         expect(hook["command"]).to eq("/usr/local/bin/formatter")
       end
+
+      it "handles commands with interpreter prefix like python3 ${CLAUDE_PLUGIN_ROOT}/..." do
+        write_script("scripts/run.py", "#!/usr/bin/env python3\nprint('hello')")
+        hooks_file = write_hooks_json({
+                                        "hooks" => {
+                                          "PostToolUse" => [
+                                            {
+                                              "matcher" => "Write",
+                                              "hooks" => [{ "type" => "command",
+                                                            "command" => "python3 ${CLAUDE_PLUGIN_ROOT}/scripts/run.py" }]
+                                            }
+                                          ]
+                                        }
+                                      })
+        adapter = build_adapter(hooks_file)
+        adapter.adapt
+
+        # Script should be copied
+        expected_script = File.join(".cursor", "hooks", "caruso", marketplace_name, plugin_name, "scripts", "run.py")
+        expect(File.exist?(expected_script)).to be true
+
+        # Command should be rewritten
+        result = read_cursor_hooks
+        hook = result["hooks"]["afterFileEdit"].first
+        expect(hook["command"]).to eq("python3 hooks/caruso/#{marketplace_name}/#{plugin_name}/scripts/run.py")
+        expect(hook["command"]).not_to include("${CLAUDE_PLUGIN_ROOT}")
+      end
     end
 
     describe "merge strategy" do

@@ -72,6 +72,10 @@ module Caruso
       url = source_config["url"] || source_config["repo"]
       url = "https://github.com/#{url}.git" if source_config["source"] == "github" && !url.match?(/\Ahttps?:/)
 
+      # Store these for later registration
+      @clone_url = url
+      @clone_source_type = source_config["source"] || "git"
+
       URI.parse(url).path.split("/").last.sub(".git", "")
       target_path = cache_dir
 
@@ -80,16 +84,21 @@ module Caruso
         FileUtils.mkdir_p(File.dirname(target_path))
         Git.clone(url, target_path)
         checkout_ref if @ref
-
-        # Add to registry
-        source_type = source_config["source"] || "git"
-        @registry.add_marketplace(@marketplace_name, url, target_path, ref: @ref, source: source_type)
       end
 
       target_path
     rescue StandardError => e
       handle_git_error(e)
       nil
+    end
+
+    # Register the marketplace in the registry after name is known.
+    # Must be called after extract_marketplace_name or when marketplace_name is set.
+    def register_marketplace(name)
+      return unless @clone_url # Only register if we cloned something
+
+      @marketplace_name = name
+      @registry.add_marketplace(name, @clone_url, cache_dir, ref: @ref, source: @clone_source_type)
     end
 
     def extract_marketplace_name
@@ -106,7 +115,25 @@ module Caruso
     private
 
     def load_marketplace
-      if local_path?
+      # Check github_repo? BEFORE local_path? because owner/repo format (e.g., "anthropics/claude-code")
+      # doesn't start with https:// but should be treated as a GitHub repo, not a local path
+      if github_repo?
+        # Clone repo and read marketplace.json from it
+        repo_path = clone_git_repo("url" => @marketplace_uri, "source" => "github")
+        # Try standard locations
+        json_path = File.join(repo_path, ".claude-plugin", "marketplace.json")
+        json_path = File.join(repo_path, "marketplace.json") unless File.exist?(json_path)
+
+        unless File.exist?(json_path)
+          raise "Could not find marketplace.json in #{@marketplace_uri}"
+        end
+
+        # Update marketplace_uri to point to the local file so relative paths work
+        @marketplace_uri = json_path
+        @base_dir = repo_path # Base dir is the repo root, regardless of where json is
+
+        JSON.parse(SafeFile.read(json_path))
+      elsif local_path?
         # If marketplace_uri is a directory, find marketplace.json in it
         if SafeDir.exist?(@marketplace_uri)
           json_path = File.join(@marketplace_uri, ".claude-plugin", "marketplace.json")
@@ -126,22 +153,6 @@ module Caruso
         end
 
         JSON.parse(SafeFile.read(@marketplace_uri))
-      elsif github_repo?
-        # Clone repo and read marketplace.json from it
-        repo_path = clone_git_repo("url" => @marketplace_uri, "source" => "github")
-        # Try standard locations
-        json_path = File.join(repo_path, ".claude-plugin", "marketplace.json")
-        json_path = File.join(repo_path, "marketplace.json") unless File.exist?(json_path)
-
-        unless File.exist?(json_path)
-          raise "Could not find marketplace.json in #{@marketplace_uri}"
-        end
-
-        # Update marketplace_uri to point to the local file so relative paths work
-        @marketplace_uri = json_path
-        @base_dir = repo_path # Base dir is the repo root, regardless of where json is
-
-        JSON.parse(SafeFile.read(json_path))
       else
         response = Faraday.get(@marketplace_uri)
         JSON.parse(response.body)

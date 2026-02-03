@@ -7,9 +7,7 @@ require_relative "base"
 module Caruso
   module Adapters
     class HookAdapter < Base
-      # Claude Code events that map to Cursor events.
-      # Each CC event maps to a single Cursor event name.
-      # Matchers are lost in translation (Cursor has no matcher concept).
+      # CC events map to Cursor events; matchers are lost (Cursor has no matcher concept).
       EVENT_MAP = {
         "PreToolUse" => "beforeShellExecution",
         "PostToolUse" => "afterShellExecution",
@@ -17,11 +15,10 @@ module Caruso
         "Stop" => "stop"
       }.freeze
 
-      # PostToolUse with Write|Edit matchers should map to afterFileEdit instead.
-      # We detect this via the matcher pattern.
+      # PostToolUse with Write|Edit matchers maps to afterFileEdit instead.
       FILE_EDIT_MATCHERS = /\A(Write|Edit|Write\|Edit|Edit\|Write|Notebook.*)\z/i
 
-      # Events that have no Cursor equivalent and must be skipped.
+      # Events with no Cursor equivalent.
       UNSUPPORTED_EVENTS = %w[
         SessionStart
         SessionEnd
@@ -31,8 +28,7 @@ module Caruso
         PermissionRequest
       ].freeze
 
-      # After adapt(), contains the translated hook commands keyed by event.
-      # Used by callers to track which hooks were installed for clean uninstall.
+      # Contains translated hook commands keyed by event (for clean uninstall tracking).
       attr_reader :translated_hooks
 
       def adapt
@@ -65,8 +61,6 @@ module Caruso
       private
 
       def find_hooks_file
-        # files array contains the hooks.json path passed in by the Dispatcher.
-        # Also matches .caruso_inline_hooks.json written by Fetcher for inline plugin.json hooks.
         files.find { |f| File.basename(f) =~ /hooks\.json\z/ }
       end
 
@@ -151,9 +145,7 @@ module Caruso
       end
 
       def plugin_root_from_hooks_file(hooks_file)
-        # ${CLAUDE_PLUGIN_ROOT} refers to the plugin root directory.
-        # hooks.json is typically at <plugin_root>/hooks/hooks.json,
-        # so the plugin root is the parent of the hooks/ directory.
+        # Plugin root is parent of hooks/ dir (hooks.json is at <plugin_root>/hooks/hooks.json)
         hooks_dir = File.dirname(hooks_file)
         if File.basename(hooks_dir) == "hooks"
           File.dirname(hooks_dir)
@@ -174,7 +166,11 @@ module Caruso
         command = hook["command"]
         return unless command&.include?("${CLAUDE_PLUGIN_ROOT}")
 
-        relative_path = command.sub("${CLAUDE_PLUGIN_ROOT}/", "")
+        # Extract path after placeholder (handles "python3 ${CLAUDE_PLUGIN_ROOT}/script.py")
+        match = command.match(%r{\$\{CLAUDE_PLUGIN_ROOT\}/([^\s]+)})
+        return unless match
+
+        relative_path = match[1]
         source_path = File.join(plugin_root, relative_path)
         return unless File.exist?(source_path)
 

@@ -29,6 +29,9 @@ module Caruso
       # Read marketplace name from marketplace.json
       marketplace_name = fetcher.extract_marketplace_name
 
+      # Register in the persistent marketplace registry (only after name is known)
+      fetcher.register_marketplace(marketplace_name)
+
       config_manager.add_marketplace(marketplace_name, url, source: source, ref: options[:ref])
 
       puts "Added marketplace '#{marketplace_name}' from #{url}"

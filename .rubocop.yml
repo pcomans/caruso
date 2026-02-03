@@ -60,6 +60,7 @@ Metrics/ClassLength:
     - 'spec/**/*'
     - 'lib/caruso/cli.rb'  # CLI class has many Thor commands
     - 'lib/caruso/fetcher.rb'  # Fetcher handles multiple sources
+    - 'lib/caruso/adapters/hook_adapter.rb'  # Hook translation has many methods
 
 # Prefer descriptive block parameter names
 Lint/UnusedBlockArgument:
