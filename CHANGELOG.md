@@ -7,6 +7,47 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-31
+
+### Added
+- **Hooks Support**: Full translation of Claude Code hooks to Cursor hooks format
+  - Event translation: `PreToolUse` → `beforeShellExecution`, `PostToolUse` → `afterFileEdit`/`afterShellExecution`, `UserPromptSubmit` → `beforeSubmitPrompt`, `Stop` → `stop`
+  - Script copying with `${CLAUDE_PLUGIN_ROOT}` path rewriting
+  - Merges all plugin hooks into single `.cursor/hooks.json` file
+  - Tracks installed hooks for surgical removal on uninstall
+  - Skips unsupported events (`SessionStart`, `SessionEnd`, etc.) with warnings
+  - Skips prompt-based hooks (Cursor doesn't support LLM evaluation in hooks)
+- **Commands Support**: New `CommandAdapter` writes slash commands to `.cursor/commands/`
+  - Commands now output as `.md` files in `.cursor/commands/caruso/<marketplace>/<plugin>/`
+  - Preserves frontmatter (`description`, `argument-hint`, `allowed-tools`, `model`)
+  - Converts bash execution markers (`!` prefix) to documentation notes
+- **Plugin.json Parsing**: Reads component paths and inline configs from `.claude-plugin/plugin.json`
+  - Marketplace.json fields take precedence over plugin.json (conflict resolution)
+  - Supports inline hooks configuration
+  - Enables plugin-level metadata tracking
+- **Comprehensive Test Coverage**: 14 new integration tests for hooks
+  - Two-plugin merge scenarios, cross-component plugins, marketplace removal cascade
+  - Plugin update idempotency, edge cases (malformed hooks, agent skipping, no-hooks plugins)
+  - Clean filesystem verification (orphan directory cleanup)
+
+### Changed
+- **Dispatcher Architecture**: Refactored with class methods and step-by-step processing
+  - Skills → Commands → Hooks → Agents (skip with warning) → Unprocessed warnings
+  - Returns structured result: `{ files: [...], hooks: {...} }`
+- **ConfigManager**: Now tracks installed hooks in `.caruso.local.json` for clean uninstall
+  - `add_plugin` accepts `hooks:` keyword argument
+  - `remove_plugin` returns `{ files: [...], hooks: {...} }`
+  - Added `get_installed_hooks` method
+- **Remover**: Enhanced hook removal and orphan directory cleanup
+  - Removes specific hook commands from merged `.cursor/hooks.json` using tracked metadata
+  - Walks up directory tree removing empty dirs after file deletion
+  - Deletes `.cursor/hooks.json` if empty after plugin removal
+- **CLI**: Updated `plugin install` and `plugin update` to pass hooks to ConfigManager
+
+### Fixed
+- Orphan directories no longer left behind after uninstalling plugins with hook scripts
+- Rubocop compliance across all source and spec files (0 offenses)
+
 ## [0.6.2] - 2025-12-17
 
 ### Fixed
