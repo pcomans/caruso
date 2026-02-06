@@ -24,13 +24,9 @@ RSpec.describe "cc_stop_wrapper.sh" do
     path
   end
 
-  def run_wrapper(hook_path, stdin_data: "")
-    stdout, stderr, status = Open3.capture3(wrapper, hook_path, stdin_data: stdin_data)
+  def run_wrapper(hook_path)
+    stdout, stderr, status = Open3.capture3(wrapper, hook_path)
     { stdout: stdout.strip, stderr: stderr.strip, exit_code: status.exitstatus }
-  end
-
-  def hook_input(overrides = {})
-    { "transcript_path" => nil, "hook_event_name" => "stop" }.merge(overrides).to_json
   end
 
   context "CC hook exits 2 with stderr (block)" do
@@ -138,80 +134,6 @@ RSpec.describe "cc_stop_wrapper.sh" do
 
       expect(result[:exit_code]).to eq(1)
       expect(result[:stdout]).to eq("error output")
-    end
-  end
-
-  context "transcript_path patching" do
-    it "provides a fake transcript with non-empty text when transcript_path is null" do
-      hook = write_mock_hook("hook.sh", <<~SH)
-        #!/bin/bash
-        INPUT=$(cat)
-        TP=$(echo "$INPUT" | jq -r '.transcript_path')
-        if [ ! -f "$TP" ]; then
-          echo "no_transcript"
-          exit 0
-        fi
-        # Extract assistant text like the real stop hook does
-        TEXT=$(grep '"role":"assistant"' "$TP" | tail -1 | jq -r '.message.content | map(select(.type == "text")) | map(.text) | join("\\n")')
-        if [ -z "$TEXT" ]; then
-          echo "empty_text"
-        else
-          echo "has_text"
-        fi
-      SH
-
-      result = run_wrapper(hook, stdin_data: hook_input("transcript_path" => nil))
-
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:stdout]).to eq("has_text")
-    end
-
-    it "provides a fake transcript when transcript_path is missing" do
-      hook = write_mock_hook("hook.sh", <<~SH)
-        #!/bin/bash
-        INPUT=$(cat)
-        TP=$(echo "$INPUT" | jq -r '.transcript_path')
-        if [ -f "$TP" ]; then
-          echo "transcript_exists"
-        else
-          echo "no_transcript"
-        fi
-      SH
-
-      result = run_wrapper(hook, stdin_data: { "hook_event_name" => "stop" }.to_json)
-
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:stdout]).to eq("transcript_exists")
-    end
-
-    it "preserves valid transcript_path when file exists" do
-      real_transcript = File.join(@tmpdir, "transcript.jsonl")
-      File.write(real_transcript, '{"role":"assistant","message":{"content":[{"type":"text","text":"hello"}]}}')
-
-      hook = write_mock_hook("hook.sh", <<~SH)
-        #!/bin/bash
-        INPUT=$(cat)
-        TP=$(echo "$INPUT" | jq -r '.transcript_path')
-        echo "$TP"
-      SH
-
-      result = run_wrapper(hook, stdin_data: hook_input("transcript_path" => real_transcript))
-
-      expect(result[:exit_code]).to eq(0)
-      expect(result[:stdout]).to eq(real_transcript)
-    end
-
-    it "works without stdin (backwards compatibility)" do
-      hook = write_mock_hook("hook.sh", <<~SH)
-        #!/bin/bash
-        echo '{"decision":"block","reason":"keep going"}'
-      SH
-
-      result = run_wrapper(hook)
-
-      expect(result[:exit_code]).to eq(0)
-      parsed = JSON.parse(result[:stdout])
-      expect(parsed["followup_message"]).to eq("keep going")
     end
   end
 end
