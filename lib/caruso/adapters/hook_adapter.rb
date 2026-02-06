@@ -12,7 +12,11 @@ module Caruso
         "PreToolUse" => "beforeShellExecution",
         "PostToolUse" => "afterShellExecution",
         "UserPromptSubmit" => "beforeSubmitPrompt",
-        "Stop" => "stop"
+        "Stop" => "stop",
+        "SessionStart" => "sessionStart",
+        "SessionEnd" => "sessionEnd",
+        "SubagentStop" => "subagentStop",
+        "PreCompact" => "preCompact"
       }.freeze
 
       # PostToolUse with Write|Edit matchers maps to afterFileEdit instead.
@@ -20,10 +24,6 @@ module Caruso
 
       # Events with no Cursor equivalent.
       UNSUPPORTED_EVENTS = %w[
-        SessionStart
-        SessionEnd
-        SubagentStop
-        PreCompact
         Notification
         PermissionRequest
       ].freeze
@@ -140,7 +140,7 @@ module Caruso
       end
 
       def rewrite_script_path(command)
-        plugin_script_dir = File.join("hooks", "caruso", marketplace_name, plugin_name)
+        plugin_script_dir = File.join(".cursor", "hooks", "caruso", marketplace_name, plugin_name)
         command.gsub("${CLAUDE_PLUGIN_ROOT}", plugin_script_dir)
       end
 

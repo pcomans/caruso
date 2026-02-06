@@ -163,42 +163,96 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         result = read_cursor_hooks
         expect(result["hooks"]["stop"]).to include(hash_including("command" => "echo stopping"))
       end
-    end
 
-    describe "unsupported event skipping" do
-      it "skips SessionStart with warning" do
+      it "translates SessionStart to sessionStart" do
         hooks_file = write_hooks_json({
                                         "hooks" => {
                                           "SessionStart" => [
-                                            { "hooks" => [{ "type" => "command", "command" => "echo session" }] }
+                                            { "hooks" => [{ "type" => "command", "command" => "echo session-start" }] }
                                           ]
                                         }
                                       })
         adapter = build_adapter(hooks_file)
-        expect { adapter.adapt }.to output(/Skipping.*SessionStart/).to_stdout
+        adapter.adapt
+
+        result = read_cursor_hooks
+        expect(result["hooks"]["sessionStart"]).to include(hash_including("command" => "echo session-start"))
+      end
+
+      it "translates SessionEnd to sessionEnd" do
+        hooks_file = write_hooks_json({
+                                        "hooks" => {
+                                          "SessionEnd" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo session-end" }] }
+                                          ]
+                                        }
+                                      })
+        adapter = build_adapter(hooks_file)
+        adapter.adapt
+
+        result = read_cursor_hooks
+        expect(result["hooks"]["sessionEnd"]).to include(hash_including("command" => "echo session-end"))
+      end
+
+      it "translates SubagentStop to subagentStop" do
+        hooks_file = write_hooks_json({
+                                        "hooks" => {
+                                          "SubagentStop" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo subagent-stop" }] }
+                                          ]
+                                        }
+                                      })
+        adapter = build_adapter(hooks_file)
+        adapter.adapt
+
+        result = read_cursor_hooks
+        expect(result["hooks"]["subagentStop"]).to include(hash_including("command" => "echo subagent-stop"))
+      end
+
+      it "translates PreCompact to preCompact" do
+        hooks_file = write_hooks_json({
+                                        "hooks" => {
+                                          "PreCompact" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo pre-compact" }] }
+                                          ]
+                                        }
+                                      })
+        adapter = build_adapter(hooks_file)
+        adapter.adapt
+
+        result = read_cursor_hooks
+        expect(result["hooks"]["preCompact"]).to include(hash_including("command" => "echo pre-compact"))
+      end
+    end
+
+    describe "unsupported event skipping" do
+      it "skips Notification with warning" do
+        hooks_file = write_hooks_json({
+                                        "hooks" => {
+                                          "Notification" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo notify" }] }
+                                          ]
+                                        }
+                                      })
+        adapter = build_adapter(hooks_file)
+        expect { adapter.adapt }.to output(/Skipping.*Notification/).to_stdout
 
         # No hooks.json created since all hooks were skipped
         expect(File.exist?(".cursor/hooks.json")).to be false
       end
 
-      it "skips SessionEnd, SubagentStop, PreCompact, Notification, PermissionRequest" do
+      it "skips PermissionRequest with warning" do
         hooks_file = write_hooks_json({
                                         "hooks" => {
-                                          "SessionEnd" => [{ "hooks" => [{ "type" => "command", "command" => "echo end" }] }],
-                                          "SubagentStop" => [{ "hooks" => [{ "type" => "command", "command" => "echo sub" }] }],
-                                          "PreCompact" => [{ "hooks" => [{ "type" => "command", "command" => "echo compact" }] }],
-                                          "Notification" => [{ "hooks" => [{ "type" => "command", "command" => "echo notify" }] }],
-                                          "PermissionRequest" => [{ "hooks" => [{ "type" => "command", "command" => "echo perm" }] }]
+                                          "PermissionRequest" => [
+                                            { "hooks" => [{ "type" => "command", "command" => "echo perm" }] }
+                                          ]
                                         }
                                       })
         adapter = build_adapter(hooks_file)
-        output = capture_output { adapter.adapt }
+        expect { adapter.adapt }.to output(/Skipping.*PermissionRequest/).to_stdout
 
-        expect(output).to include("SessionEnd")
-        expect(output).to include("SubagentStop")
-        expect(output).to include("PreCompact")
-        expect(output).to include("Notification")
-        expect(output).to include("PermissionRequest")
+        expect(File.exist?(".cursor/hooks.json")).to be false
       end
     end
 
@@ -297,7 +351,7 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         # Command should be rewritten
         result = read_cursor_hooks
         hook = result["hooks"]["afterFileEdit"].first
-        expect(hook["command"]).to eq("hooks/caruso/#{marketplace_name}/#{plugin_name}/scripts/format.sh")
+        expect(hook["command"]).to eq(".cursor/hooks/caruso/#{marketplace_name}/#{plugin_name}/scripts/format.sh")
         expect(hook["command"]).not_to include("${CLAUDE_PLUGIN_ROOT}")
       end
 
@@ -365,8 +419,59 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         # Command should be rewritten
         result = read_cursor_hooks
         hook = result["hooks"]["afterFileEdit"].first
-        expect(hook["command"]).to eq("python3 hooks/caruso/#{marketplace_name}/#{plugin_name}/scripts/run.py")
+        expect(hook["command"]).to eq("python3 .cursor/hooks/caruso/#{marketplace_name}/#{plugin_name}/scripts/run.py")
         expect(hook["command"]).not_to include("${CLAUDE_PLUGIN_ROOT}")
+      end
+    end
+
+    describe "ralph-wiggum style Stop hook with script" do
+      it "correctly converts a Stop hook referencing ${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh" do
+        # Simulate ralph-wiggum plugin structure: hooks.json is at <plugin>/hooks/hooks.json
+        # and the script is at <plugin>/hooks/stop-hook.sh
+        hooks_dir = File.join(@plugin_dir, "hooks")
+        FileUtils.mkdir_p(hooks_dir)
+        hooks_file = File.join(hooks_dir, "hooks.json")
+        File.write(hooks_file, JSON.pretty_generate({
+                                                      "description" => "Ralph Wiggum plugin stop hook",
+                                                      "hooks" => {
+                                                        "Stop" => [
+                                                          {
+                                                            "hooks" => [
+                                                              {
+                                                                "type" => "command",
+                                                                "command" => "${CLAUDE_PLUGIN_ROOT}/hooks/stop-hook.sh"
+                                                              }
+                                                            ]
+                                                          }
+                                                        ]
+                                                      }
+                                                    }))
+
+        # Create the stop-hook.sh script in the hooks directory
+        File.write(File.join(hooks_dir, "stop-hook.sh"), "#!/bin/bash\nexit 0\n")
+        File.chmod(0o755, File.join(hooks_dir, "stop-hook.sh"))
+
+        adapter = build_adapter(hooks_file)
+        created = adapter.adapt
+
+        # Verify the hook event is correctly translated
+        result = read_cursor_hooks
+        expect(result["version"]).to eq(1)
+        expect(result["hooks"]["stop"]).to be_an(Array)
+        expect(result["hooks"]["stop"].length).to eq(1)
+
+        # Verify the command path is correct relative to project root
+        hook = result["hooks"]["stop"].first
+        expected_path = ".cursor/hooks/caruso/#{marketplace_name}/#{plugin_name}/hooks/stop-hook.sh"
+        expect(hook["command"]).to eq(expected_path)
+
+        # Verify the script was actually copied to the right location
+        expect(File.exist?(expected_path)).to be true
+        expect(File.stat(expected_path).mode & 0o755).to eq(0o755)
+
+        # Verify the return value includes both the hooks.json and the copied script
+        expect(created).to include(".cursor/hooks.json")
+        expect(created).to include(expected_path)
       end
     end
 
