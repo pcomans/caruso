@@ -149,7 +149,7 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         expect(result["hooks"]["beforeSubmitPrompt"]).to include(hash_including("command" => "echo validate"))
       end
 
-      it "translates Stop to stop" do
+      it "translates Stop to stop with wrapper and loop_limit" do
         hooks_file = write_hooks_json({
                                         "hooks" => {
                                           "Stop" => [
@@ -161,7 +161,10 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         adapter.adapt
 
         result = read_cursor_hooks
-        expect(result["hooks"]["stop"]).to include(hash_including("command" => "echo stopping"))
+        hook = result["hooks"]["stop"].first
+        expect(hook["command"]).to eq(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo stopping")
+        expect(hook["loop_limit"]).to be_nil
+        expect(hook).to have_key("loop_limit")
       end
 
       it "translates SessionStart to sessionStart" do
@@ -194,7 +197,7 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         expect(result["hooks"]["sessionEnd"]).to include(hash_including("command" => "echo session-end"))
       end
 
-      it "translates SubagentStop to subagentStop" do
+      it "translates SubagentStop to subagentStop with wrapper and loop_limit" do
         hooks_file = write_hooks_json({
                                         "hooks" => {
                                           "SubagentStop" => [
@@ -206,7 +209,10 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         adapter.adapt
 
         result = read_cursor_hooks
-        expect(result["hooks"]["subagentStop"]).to include(hash_including("command" => "echo subagent-stop"))
+        hook = result["hooks"]["subagentStop"].first
+        expect(hook["command"]).to eq(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo subagent-stop")
+        expect(hook["loop_limit"]).to be_nil
+        expect(hook).to have_key("loop_limit")
       end
 
       it "translates PreCompact to preCompact" do
@@ -286,7 +292,9 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         adapter.adapt
 
         result = read_cursor_hooks
-        expect(result["hooks"]["stop"]).to include(hash_including("command" => "echo check"))
+        expect(result["hooks"]["stop"]).to include(
+          hash_including("command" => ".cursor/hooks/caruso/_cc_stop_wrapper.sh echo check")
+        )
       end
     end
 
@@ -460,18 +468,25 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         expect(result["hooks"]["stop"]).to be_an(Array)
         expect(result["hooks"]["stop"].length).to eq(1)
 
-        # Verify the command path is correct relative to project root
+        # Verify the command is wrapped with the CC-to-Cursor translator
         hook = result["hooks"]["stop"].first
-        expected_path = ".cursor/hooks/caruso/#{marketplace_name}/#{plugin_name}/hooks/stop-hook.sh"
-        expect(hook["command"]).to eq(expected_path)
+        expected_script = ".cursor/hooks/caruso/#{marketplace_name}/#{plugin_name}/hooks/stop-hook.sh"
+        expect(hook["command"]).to eq(".cursor/hooks/caruso/_cc_stop_wrapper.sh #{expected_script}")
+        expect(hook["loop_limit"]).to be_nil
+        expect(hook).to have_key("loop_limit")
 
         # Verify the script was actually copied to the right location
-        expect(File.exist?(expected_path)).to be true
-        expect(File.stat(expected_path).mode & 0o755).to eq(0o755)
+        expect(File.exist?(expected_script)).to be true
+        expect(File.stat(expected_script).mode & 0o755).to eq(0o755)
 
-        # Verify the return value includes both the hooks.json and the copied script
+        # Verify the wrapper script was installed
+        expect(File.exist?(".cursor/hooks/caruso/_cc_stop_wrapper.sh")).to be true
+        expect(File.stat(".cursor/hooks/caruso/_cc_stop_wrapper.sh").mode & 0o755).to eq(0o755)
+
+        # Verify the return value includes hooks.json, the copied script, and the wrapper
         expect(created).to include(".cursor/hooks.json")
-        expect(created).to include(expected_path)
+        expect(created).to include(expected_script)
+        expect(created).to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh")
       end
     end
 
@@ -559,7 +574,9 @@ RSpec.describe Caruso::Adapters::HookAdapter do
         adapter.adapt
 
         result = read_cursor_hooks
-        expect(result["hooks"]["stop"]).to include(hash_including("command" => "echo recovered"))
+        expect(result["hooks"]["stop"]).to include(
+          hash_including("command" => ".cursor/hooks/caruso/_cc_stop_wrapper.sh echo recovered")
+        )
       end
     end
 

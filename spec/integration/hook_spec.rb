@@ -41,7 +41,7 @@ RSpec.describe "Hook Installation", type: :integration do
 
       expect(hooks_data["hooks"]["stop"]).to be_an(Array)
       stop_commands = hooks_data["hooks"]["stop"].map { |h| h["command"] }
-      expect(stop_commands).to include("echo 'Plugin stop hook executed'")
+      expect(stop_commands).to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo 'Plugin stop hook executed'")
     end
 
     it "copies referenced hook scripts and rewrites paths" do
@@ -202,10 +202,10 @@ RSpec.describe "Hook Installation", type: :integration do
       expect(hooks_data["hooks"]["beforeShellExecution"]).to be_an(Array)
       expect(hooks_data["hooks"]["beforeShellExecution"]).not_to be_empty
 
-      # stop hooks from BOTH plugins
+      # stop hooks from BOTH plugins (wrapped with CC-to-Cursor translator)
       stop_commands = hooks_data["hooks"]["stop"].map { |h| h["command"] }
-      expect(stop_commands).to include("echo 'Plugin stop hook executed'")
-      expect(stop_commands).to include("echo 'hooks-plugin stop hook'")
+      expect(stop_commands).to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo 'Plugin stop hook executed'")
+      expect(stop_commands).to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo 'hooks-plugin stop hook'")
     end
 
     it "uninstalling one plugin preserves the other's hooks" do
@@ -224,10 +224,10 @@ RSpec.describe "Hook Installation", type: :integration do
 
       hooks_data = JSON.parse(File.read(hooks_path))
 
-      # hooks-plugin's stop hook remains
+      # hooks-plugin's stop hook remains (wrapped)
       stop_commands = hooks_data["hooks"]["stop"].map { |h| h["command"] }
-      expect(stop_commands).to include("echo 'hooks-plugin stop hook'")
-      expect(stop_commands).not_to include("echo 'Plugin stop hook executed'")
+      expect(stop_commands).to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo 'hooks-plugin stop hook'")
+      expect(stop_commands).not_to include(".cursor/hooks/caruso/_cc_stop_wrapper.sh echo 'Plugin stop hook executed'")
 
       # hooks-plugin's beforeShellExecution remains
       expect(hooks_data["hooks"]["beforeShellExecution"]).to be_an(Array)
