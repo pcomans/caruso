@@ -142,22 +142,28 @@ RSpec.describe "cc_stop_wrapper.sh" do
   end
 
   context "transcript_path patching" do
-    it "provides a fake transcript when transcript_path is null" do
+    it "provides a fake transcript with non-empty text when transcript_path is null" do
       hook = write_mock_hook("hook.sh", <<~SH)
         #!/bin/bash
         INPUT=$(cat)
         TP=$(echo "$INPUT" | jq -r '.transcript_path')
-        if [ -f "$TP" ]; then
-          echo "transcript_exists"
-        else
+        if [ ! -f "$TP" ]; then
           echo "no_transcript"
+          exit 0
+        fi
+        # Extract assistant text like the real stop hook does
+        TEXT=$(grep '"role":"assistant"' "$TP" | tail -1 | jq -r '.message.content | map(select(.type == "text")) | map(.text) | join("\\n")')
+        if [ -z "$TEXT" ]; then
+          echo "empty_text"
+        else
+          echo "has_text"
         fi
       SH
 
       result = run_wrapper(hook, stdin_data: hook_input("transcript_path" => nil))
 
       expect(result[:exit_code]).to eq(0)
-      expect(result[:stdout]).to eq("transcript_exists")
+      expect(result[:stdout]).to eq("has_text")
     end
 
     it "provides a fake transcript when transcript_path is missing" do

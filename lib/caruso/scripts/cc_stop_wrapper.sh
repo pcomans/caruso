@@ -30,7 +30,7 @@ if [ -n "$INPUT" ] && command -v jq >/dev/null 2>&1; then
   TP=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null)
   if [ -z "$TP" ] || [ "$TP" = "null" ] || [ ! -f "$TP" ]; then
     FAKE_TRANSCRIPT=$(mktemp) || exit 1
-    echo '{"role":"assistant","message":{"content":[{"type":"text","text":""}]}}' > "$FAKE_TRANSCRIPT"
+    echo '{"role":"assistant","message":{"content":[{"type":"text","text":"(transcript not available)"}]}}' > "$FAKE_TRANSCRIPT"
     INPUT=$(echo "$INPUT" | jq --arg tp "$FAKE_TRANSCRIPT" '.transcript_path = $tp')
   fi
 fi
