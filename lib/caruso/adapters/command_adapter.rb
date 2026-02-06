@@ -40,9 +40,9 @@ module Caruso
         # We don't need globs or alwaysApply (those are for rules)
         # Just return content as-is, Claude Code commands are already compatible
 
-        # Add note about bash execution if it contains ! prefix
+        # Convert ```! auto-execute blocks to ```bash with run instruction
         if content.include?("`!")
-          add_bash_execution_note(content)
+          convert_auto_execute_blocks(content)
         else
           content
         end
@@ -57,14 +57,9 @@ module Caruso
         YAML
       end
 
-      def add_bash_execution_note(content)
-        match = content.match(/\A---\s*\n(.*?)\n---\s*\n/m)
-        return content unless match
-
-        note = "\n**Note:** This command originally used Claude Code's `!` prefix for bash execution. " \
-               "Cursor does not support this feature. The bash commands are documented below for reference.\n"
-
-        "---\n#{match[1]}\n---\n#{note}#{match.post_match}"
+      def convert_auto_execute_blocks(content)
+        # Replace ```! with ```bash and add instruction to run
+        content.gsub("```!\n", "```bash\n")
       end
 
       def save_command_file(relative_path, content)

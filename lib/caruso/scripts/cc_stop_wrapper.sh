@@ -1,14 +1,17 @@
 #!/bin/bash
-# Translates Claude Code stop hook output to Cursor format.
+# Translates Claude Code stop hook I/O to Cursor format.
 #
-# CC stop hooks communicate via:
-#   Exit 2 + stderr reason       -> block (continue conversation)
-#   Exit 0 + {"decision":"block","reason":"..."} -> block
-#   Exit 0 + anything else       -> allow stop
+# INPUT translation (stdin):
+#   Cursor may pass transcript_path: null. CC hooks that read the transcript
+#   would bail out. We provide a minimal dummy transcript so the hook can
+#   proceed past transcript gates (completion promise won't match, but the
+#   core loop/block logic still works).
 #
-# Cursor stop hooks expect:
-#   Exit 0 + {"followup_message":"..."} -> continue with message
-#   Exit 0 + no output                 -> allow stop
+# OUTPUT translation (stdout):
+#   CC: exit 2 + stderr reason       -> block
+#   CC: exit 0 + {"decision":"block","reason":"..."} -> block
+#   Cursor: exit 0 + {"followup_message":"..."} -> continue with message
+#   Cursor: exit 0 + no output                 -> allow stop
 #
 # Usage: cc_stop_wrapper.sh <original-script> [args...]
 
@@ -18,9 +21,21 @@ SCRIPT="$1"
 shift
 
 STDERR_TMP=$(mktemp) || exit 1
-trap 'rm -f "$STDERR_TMP"' EXIT
+FAKE_TRANSCRIPT=""
+trap 'rm -f "$STDERR_TMP" "$FAKE_TRANSCRIPT"' EXIT
 
-OUTPUT=$("$SCRIPT" "$@" 2>"$STDERR_TMP")
+# Read and patch stdin: ensure transcript_path points to a readable file
+INPUT=$(cat)
+if [ -n "$INPUT" ] && command -v jq >/dev/null 2>&1; then
+  TP=$(echo "$INPUT" | jq -r '.transcript_path // empty' 2>/dev/null)
+  if [ -z "$TP" ] || [ "$TP" = "null" ] || [ ! -f "$TP" ]; then
+    FAKE_TRANSCRIPT=$(mktemp) || exit 1
+    echo '{"role":"assistant","message":{"content":[{"type":"text","text":""}]}}' > "$FAKE_TRANSCRIPT"
+    INPUT=$(echo "$INPUT" | jq --arg tp "$FAKE_TRANSCRIPT" '.transcript_path = $tp')
+  fi
+fi
+
+OUTPUT=$(echo "$INPUT" | "$SCRIPT" "$@" 2>"$STDERR_TMP")
 EXIT_CODE=$?
 
 # CC exit 2 = block with stderr reason

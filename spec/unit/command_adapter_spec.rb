@@ -63,6 +63,26 @@ RSpec.describe Caruso::Adapters::CommandAdapter do
     expect(File.exist?(".cursor/commands/caruso/test-marketplace/test-plugin/scripts/setup-ralph-loop.sh")).to be true
   end
 
+  it "converts ```! auto-execute blocks to ```bash" do
+    command_file = write_command_and_script
+
+    build_adapter(command_file).adapt
+
+    installed_command = File.read(".cursor/commands/caruso/test-marketplace/test-plugin/ralph-loop.md")
+    expect(installed_command).to include("```bash\n")
+    expect(installed_command).not_to include("```!\n")
+  end
+
+  it "does not add a passive 'not supported' note" do
+    command_file = write_command_and_script
+
+    build_adapter(command_file).adapt
+
+    installed_command = File.read(".cursor/commands/caruso/test-marketplace/test-plugin/ralph-loop.md")
+    expect(installed_command).not_to include("does not support")
+    expect(installed_command).not_to include("for reference")
+  end
+
   it "finds scripts when command markdown is in a custom nested path" do
     command_file = write_command_and_script(command_dir: "custom/deep/commands")
 
@@ -71,5 +91,31 @@ RSpec.describe Caruso::Adapters::CommandAdapter do
     installed_command = File.read(".cursor/commands/caruso/test-marketplace/test-plugin/ralph-loop.md")
     expect(installed_command).to include(".cursor/commands/caruso/test-marketplace/test-plugin/scripts/setup-ralph-loop.sh")
     expect(File.exist?(".cursor/commands/caruso/test-marketplace/test-plugin/scripts/setup-ralph-loop.sh")).to be true
+  end
+
+  it "leaves commands without ! blocks unchanged" do
+    plugin_root = File.join(Dir.pwd, "plugin")
+    command_file = File.join(plugin_root, "commands", "help.md")
+    FileUtils.mkdir_p(File.dirname(command_file))
+    File.write(command_file, <<~MD)
+      ---
+      description: "Show help"
+      ---
+
+      # Help
+
+      This is a help command with a ```bash example:
+
+      ```bash
+      echo "hello"
+      ```
+    MD
+
+    build_adapter(command_file).adapt
+
+    installed = File.read(".cursor/commands/caruso/test-marketplace/test-plugin/help.md")
+    expect(installed).to include("```bash\n")
+    expect(installed).not_to include("```!\n")
+    expect(installed).to include("Show help")
   end
 end
