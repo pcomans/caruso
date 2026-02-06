@@ -6,21 +6,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Caruso is a Ruby gem CLI that bridges the gap between AI coding assistants. It fetches "steering documentation" (commands, agents, skills) from Claude Code Marketplaces and converts them to formats compatible with other IDEs, currently Cursor.
 
-## Source of Truth: Claude Code Documentation
+## Source of Truth: Official Documentation
 
-**IMPORTANT:** The official Claude Code marketplace and plugin specifications are located in `/Users/philipp/code/caruso/reference/`:
+**IMPORTANT:** The authoritative sources for Claude Code and Cursor specifications are the official docs. Reference links are in `/Users/philipp/code/caruso/reference/`:
 
-- `marketplace.md` - Marketplace structure and specification
-- `plugins.md` - Plugin format and configuration
-- `plugins_reference.md` - Component configuration fields and metadata
+- `claude_code.md` - Links to official Claude Code docs (hooks, plugins, marketplaces, skills)
+- `cursor.md` - Links to official Cursor docs (hooks, modes, rules, commands)
 
-**These reference documents are the authoritative source for:**
-- Marketplace.json schema and plugin metadata format
-- Component configuration fields (`commands`, `agents`, `skills`, `hooks`, `mcpServers`)
-- Expected directory structures and file patterns
-- Metadata requirements and validation rules
-
-When implementing features or fixing bugs related to marketplace compatibility, **always consult these reference files first**. If the implementation conflicts with the reference docs, the reference docs are correct and the code should be updated to match.
+When implementing features or fixing bugs, **always fetch the latest docs from these official URLs**. If the implementation conflicts with the official docs, the docs are correct and the code should be updated to match.
 
 ## Development Commands
 
@@ -270,6 +263,9 @@ Results are deduplicated with `.uniq`.
 8. Push: `git push origin main --tags`
 
 Version is managed in `lib/caruso/version.rb`.
+
+# Rules
+- **NEVER force-push.** No `git push --force`, `git push --force-with-lease`, or `git push origin <tag> --force`. If a tag or commit was pushed wrong, fix forward with a new version.
 
 # Memory
 - The goal is a clean, correct, consistent implementation. Never implement fallbacks that hide errors or engage in defensive programming.
