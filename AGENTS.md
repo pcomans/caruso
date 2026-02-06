@@ -185,7 +185,7 @@ Thor-based CLI with nested commands:
 - Plugin install format: `plugin@marketplace` or just `plugin` (if only one marketplace configured)
 - Update commands refresh marketplace cache (git pull) before fetching latest plugin files
 - Marketplace add eagerly clones repos unless `CARUSO_TESTING_SKIP_CLONE` env var is set (used in tests)
-- **Marketplace names always come from marketplace.json `name` field (required)** - no custom names allowed
+- **Marketplace names for GitHub sources are derived as `owner-repo`** (matching Claude Code behavior). For non-GitHub sources, names come from marketplace.json `name` field (required). No custom names allowed.
 - Errors use descriptive messages with suggestions (e.g., "use 'caruso marketplace add <url>'")
 
 ### Data Flow Example

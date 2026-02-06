@@ -470,6 +470,43 @@ RSpec.describe Caruso::Fetcher do
     end
   end
 
+  describe "#extract_marketplace_name" do
+    context "with GitHub HTTPS URL" do
+      it "derives name as owner-repo" do
+        fetcher = described_class.new("https://github.com/anthropics/claude-code")
+        expect(fetcher.extract_marketplace_name).to eq("anthropics-claude-code")
+      end
+
+      it "strips .git suffix" do
+        fetcher = described_class.new("https://github.com/anthropics/claude-code.git")
+        expect(fetcher.extract_marketplace_name).to eq("anthropics-claude-code")
+      end
+    end
+
+    context "with owner/repo shorthand" do
+      it "derives name as owner-repo" do
+        fetcher = described_class.new("anthropics/claude-code")
+        expect(fetcher.extract_marketplace_name).to eq("anthropics-claude-code")
+      end
+    end
+
+    context "with local path" do
+      it "reads name from marketplace.json" do
+        create_marketplace([])
+        fetcher = described_class.new(marketplace_json, marketplace_name: marketplace_name)
+        expect(fetcher.extract_marketplace_name).to eq("test-marketplace")
+      end
+
+      it "raises when marketplace.json has no name field" do
+        FileUtils.mkdir_p(File.dirname(marketplace_json))
+        File.write(marketplace_json, JSON.pretty_generate({ "plugins" => [] }))
+
+        fetcher = described_class.new(marketplace_json)
+        expect { fetcher.extract_marketplace_name }.to raise_error(Caruso::Error, /missing required 'name' field/)
+      end
+    end
+  end
+
   describe "#fetch_plugin with recursive skills" do
     it "recursively fetches all files in skill directories" do
       plugin_dir = File.join(marketplace_dir, "recursive-skills")

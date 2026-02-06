@@ -94,6 +94,7 @@ module Caruso
 
     # Register the marketplace in the registry after name is known.
     # Must be called after extract_marketplace_name or when marketplace_name is set.
+    # For GitHub sources, name is derived from URL (owner-repo); for others, from marketplace.json.
     def register_marketplace(name)
       return unless @clone_url # Only register if we cloned something
 
@@ -102,14 +103,18 @@ module Caruso
     end
 
     def extract_marketplace_name
-      marketplace_data = load_marketplace
-      name = marketplace_data["name"]
+      if github_repo?
+        extract_github_marketplace_name
+      else
+        marketplace_data = load_marketplace
+        name = marketplace_data["name"]
 
-      unless name
-        raise Caruso::Error, "Invalid marketplace: marketplace.json missing required 'name' field"
+        unless name
+          raise Caruso::Error, "Invalid marketplace: marketplace.json missing required 'name' field"
+        end
+
+        name
       end
-
-      name
     end
 
     private
@@ -399,6 +404,19 @@ module Caruso
 
     def extract_name_from_url(url)
       url.split("/").last.sub(".git", "")
+    end
+
+    # Derive marketplace name from GitHub URL as owner-repo (matching Claude Code behavior).
+    def extract_github_marketplace_name
+      uri = @marketplace_uri.sub(/\.git\z/, "")
+
+      if uri.match?(%r{\Ahttps://github\.com/})
+        parts = URI.parse(uri).path.split("/").reject(&:empty?)
+        "#{parts[0]}-#{parts[1]}"
+      else
+        # owner/repo shorthand
+        uri.tr("/", "-")
+      end
     end
   end
 end
