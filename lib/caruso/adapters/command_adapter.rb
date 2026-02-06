@@ -9,13 +9,15 @@ module Caruso
         created_files = []
         files.each do |file_path|
           content = SafeFile.read(file_path)
-          adapted_content = adapt_command_content(content, file_path)
+          rewritten_content, copied_scripts = copy_command_scripts_and_rewrite_paths(content, file_path)
+          adapted_content = adapt_command_content(rewritten_content, file_path)
 
           # Commands are flat .md files in .cursor/commands/
           # NOT nested like rules, so we override the save behavior
           created_file = save_command_file(file_path, adapted_content)
 
           created_files << created_file
+          created_files.concat(copied_scripts)
         end
         created_files
       end
@@ -82,6 +84,53 @@ module Caruso
 
         # Return relative path for tracking
         File.join(".cursor/commands", subdirs, output_filename)
+      end
+
+      def copy_command_scripts_and_rewrite_paths(content, command_file)
+        command_root = File.join(".cursor", "commands", "caruso", marketplace_name, plugin_name)
+
+        copied_scripts = extract_plugin_script_paths(content).filter_map do |relative_path|
+          copy_script(relative_path, command_file, command_root)
+        end
+
+        rewritten_content = content.gsub("${CLAUDE_PLUGIN_ROOT}", command_root)
+        [rewritten_content, copied_scripts]
+      end
+
+      def extract_plugin_script_paths(content)
+        content.scan(%r{\$\{CLAUDE_PLUGIN_ROOT\}/([A-Za-z0-9._\-/]+)}).flatten.uniq
+      end
+
+      def copy_script(relative_path, command_file, command_root)
+        source_path = locate_script_source(relative_path, command_file)
+        unless source_path
+          puts "Warning: Referenced command script not found for #{command_file}: #{relative_path}"
+          return nil
+        end
+
+        target_path = File.join(command_root, relative_path)
+        FileUtils.mkdir_p(File.dirname(target_path))
+        FileUtils.cp(source_path, target_path)
+        File.chmod(0o755, target_path)
+        puts "Copied command script: #{target_path}"
+
+        target_path
+      end
+
+      def locate_script_source(relative_path, command_file)
+        current_dir = File.dirname(command_file)
+
+        loop do
+          candidate = File.join(current_dir, relative_path)
+          return candidate if File.exist?(candidate)
+
+          parent_dir = File.dirname(current_dir)
+          break if parent_dir == current_dir
+
+          current_dir = parent_dir
+        end
+
+        nil
       end
     end
   end
