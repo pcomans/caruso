@@ -226,6 +226,10 @@ caruso plugin uninstall PLUGIN         # Uninstall a plugin
 caruso version                         # Print Caruso version
 ```
 
+## Limitations
+
+Caruso translates the **interface** between Claude Code and Cursor (file formats, event names, output protocols), but it cannot translate plugin internals. Hooks and scripts that depend on Claude Code-specific runtime behavior — such as reading the session transcript, checking `stop_hook_active`, or using `CLAUDE_ENV_FILE` — will not work in Cursor because those conventions don't exist there. Plugins that rely on these internals need to be adapted upstream to handle missing fields gracefully.
+
 ## How it works
 
 1.  **Init**: Creates `caruso.json` and `.caruso.local.json` (one-time setup)
