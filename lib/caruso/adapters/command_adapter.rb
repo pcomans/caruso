@@ -41,7 +41,7 @@ module Caruso
         # Just return content as-is, Claude Code commands are already compatible
 
         # Add note about bash execution if it contains ! prefix
-        if content.include?("!`")
+        if content.include?("`!")
           add_bash_execution_note(content)
         else
           content
