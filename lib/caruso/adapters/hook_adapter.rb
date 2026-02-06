@@ -32,37 +32,7 @@ module Caruso
       STOP_EVENTS = %w[stop subagentStop].freeze
 
       WRAPPER_PATH = File.join(".cursor", "hooks", "caruso", "_cc_stop_wrapper.sh").freeze
-
-      # Translates Claude Code stop hook output to Cursor format.
-      # CC: {"decision":"block","reason":"..."} or exit 2 with stderr
-      # Cursor: {"followup_message":"..."}
-      CC_STOP_WRAPPER = <<~'BASH'
-        #!/bin/bash
-        set -uo pipefail
-        SCRIPT="$1"
-        shift
-        STDERR_TMP=$(mktemp) || exit 1
-        trap 'rm -f "$STDERR_TMP"' EXIT
-        OUTPUT=$("$SCRIPT" "$@" 2>"$STDERR_TMP")
-        EXIT_CODE=$?
-        if [ $EXIT_CODE -eq 2 ]; then
-          REASON=$(cat "$STDERR_TMP")
-          if [ -n "$REASON" ] && command -v jq >/dev/null 2>&1; then
-            jq -n --arg msg "$REASON" '{"followup_message": $msg}'
-          fi
-          exit 0
-        fi
-        if [ $EXIT_CODE -eq 0 ] && [ -n "$OUTPUT" ] && command -v jq >/dev/null 2>&1; then
-          DECISION=$(echo "$OUTPUT" | jq -r '.decision // empty' 2>/dev/null)
-          if [ "$DECISION" = "block" ]; then
-            REASON=$(echo "$OUTPUT" | jq -r '.reason // empty' 2>/dev/null)
-            [ -n "$REASON" ] && jq -n --arg msg "$REASON" '{"followup_message": $msg}'
-            exit 0
-          fi
-        fi
-        [ -n "$OUTPUT" ] && echo "$OUTPUT"
-        exit $EXIT_CODE
-      BASH
+      WRAPPER_SOURCE = File.expand_path("../scripts/cc_stop_wrapper.sh", __dir__).freeze
 
       # Contains translated hook commands keyed by event (for clean uninstall tracking).
       attr_reader :translated_hooks
@@ -145,18 +115,26 @@ module Caruso
               next
             end
 
-            command = hook["command"]
-            next unless command
+            cursor_entry = build_cursor_hook(event_name, matcher, hook)
+            next unless cursor_entry
 
-            cursor_event = resolve_cursor_event(event_name, matcher)
-            cursor_hook = { "command" => command }
-            cursor_hook["timeout"] = hook["timeout"] if hook["timeout"]
-            cursor_hook["loop_limit"] = nil if STOP_EVENTS.include?(cursor_event)
-            (hooks[cursor_event] ||= []) << cursor_hook
+            event, entry = cursor_entry
+            (hooks[event] ||= []) << entry
           end
         end
 
         { hooks: hooks, skipped_prompts: skipped }
+      end
+
+      def build_cursor_hook(event_name, matcher, hook)
+        command = hook["command"]
+        return unless command
+
+        cursor_event = resolve_cursor_event(event_name, matcher)
+        cursor_hook = { "command" => command }
+        cursor_hook["timeout"] = hook["timeout"] if hook["timeout"]
+        cursor_hook["loop_limit"] = nil if STOP_EVENTS.include?(cursor_event)
+        [cursor_event, cursor_hook]
       end
 
       def warn_skipped(skipped_events, skipped_prompts)
@@ -244,7 +222,7 @@ module Caruso
 
       def install_wrapper_script
         FileUtils.mkdir_p(File.dirname(WRAPPER_PATH))
-        File.write(WRAPPER_PATH, CC_STOP_WRAPPER)
+        FileUtils.cp(WRAPPER_SOURCE, WRAPPER_PATH)
         File.chmod(0o755, WRAPPER_PATH)
         puts "Installed stop hook wrapper: #{WRAPPER_PATH}"
         WRAPPER_PATH
